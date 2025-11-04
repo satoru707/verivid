@@ -1,25 +1,23 @@
 import { Wallet, Mail, Sparkles, ArrowLeft } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
 
-interface AuthPageProps {
-  onBack: () => void;
-}
-
-export function AuthPage({ onBack }: AuthPageProps) {
+export function AuthPage() {
   return (
     <div className="min-h-screen pt-32 pb-20 flex items-center justify-center px-6 sm:px-8">
       <div className="max-w-md w-full">
         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          onClick={onBack}
           className="flex items-center gap-2 text-[#16213E]/60 hover:text-[#16213E] transition-colors mb-8 group"
         >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span style={{ fontSize: '1rem', fontWeight: 500 }}>
-            Back to Home
-          </span>
+          <Link to="/">
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span style={{ fontSize: '1rem', fontWeight: 500 }}>
+              Back to Home
+            </span>
+          </Link>
         </motion.button>
 
         <motion.div
@@ -28,14 +26,11 @@ export function AuthPage({ onBack }: AuthPageProps) {
           transition={{ delay: 0.1 }}
           className="glass-strong rounded-2xl p-10 text-center relative overflow-hidden shadow-xl"
         >
-          {/* Content */}
           <div className="relative z-10">
-            {/* Icon */}
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#A7E6FF] to-[#C6A0F6] mb-6 glow-ice shadow-lg mx-auto">
               <Sparkles className="w-8 h-8 text-[#16213E]" fill="#16213E" />
             </div>
 
-            {/* Title */}
             <h2
               className="text-[#16213E] mb-2"
               style={{ fontSize: '1.5rem', fontWeight: 800 }}
@@ -51,7 +46,6 @@ export function AuthPage({ onBack }: AuthPageProps) {
               Sign in to verify and protect your videos.
             </p>
 
-            {/* Auth Options */}
             <div className="space-y-3 mb-6">
               <Button
                 className="w-full bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl hover:scale-105 transition-all glow-ice border-0 h-12"
@@ -85,7 +79,6 @@ export function AuthPage({ onBack }: AuthPageProps) {
               </Button>
             </div>
 
-            {/* Info */}
             <p
               className="text-[#16213E]/50"
               style={{ fontSize: '0.8125rem', lineHeight: 1.6 }}

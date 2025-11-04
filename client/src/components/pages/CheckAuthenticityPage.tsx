@@ -12,20 +12,16 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 
-interface CheckAuthenticityPageProps {
-  onVerifyNow: () => void;
-}
-
-export function CheckAuthenticityPage({
-  onVerifyNow,
-}: CheckAuthenticityPageProps) {
+export function CheckAuthenticityPage() {
   const [searchType, setSearchType] = useState<'file' | 'link'>('link');
   const [searchValue, setSearchValue] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [searchResult, setSearchResult] = useState<
     'verified' | 'not-found' | null
   >(null);
+  const navigate = useNavigate();
 
   const handleSearch = () => {
     setIsScanning(true);
@@ -410,7 +406,6 @@ export function CheckAuthenticityPage({
             </motion.div>
           )}
 
-          {/* Not Found Result */}
           {searchResult === 'not-found' && (
             <motion.div
               key="not-found"
@@ -444,7 +439,7 @@ export function CheckAuthenticityPage({
 
                 <div className="flex gap-3">
                   <Button
-                    onClick={onVerifyNow}
+                    onClick={() => navigate({ to: '/upload' })}
                     className="flex-1 bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12"
                     style={{ fontSize: '0.9375rem', fontWeight: 600 }}
                   >

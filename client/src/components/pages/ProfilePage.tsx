@@ -3,12 +3,10 @@ import { VideoCard } from '../VideoCard';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { motion } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 
-interface ProfilePageProps {
-  onViewCertificate: (videoId: string) => void;
-}
-
-export function ProfilePage({ onViewCertificate }: ProfilePageProps) {
+export function ProfilePage() {
+  const navigate = useNavigate();
   const profile = {
     address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     memberSince: 'June 2024',
@@ -78,14 +76,12 @@ export function ProfilePage({ onViewCertificate }: ProfilePageProps) {
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-6xl mx-auto">
-        {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="glass-card rounded-2xl p-8 mb-10"
         >
           <div className="flex flex-col md:flex-row items-start gap-6">
-            {/* Avatar */}
             <Avatar className="w-20 h-20 border-2 border-[#A7E6FF]/40 shadow-lg">
               <AvatarFallback
                 className="bg-gradient-to-br from-[#A7E6FF] to-[#C6A0F6] text-[#16213E]"
@@ -95,7 +91,6 @@ export function ProfilePage({ onViewCertificate }: ProfilePageProps) {
               </AvatarFallback>
             </Avatar>
 
-            {/* Info */}
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-3">
                 <h2
@@ -141,7 +136,6 @@ export function ProfilePage({ onViewCertificate }: ProfilePageProps) {
           </div>
         </motion.div>
 
-        {/* Verified Videos Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -178,14 +172,13 @@ export function ProfilePage({ onViewCertificate }: ProfilePageProps) {
               >
                 <VideoCard
                   {...video}
-                  onClick={() => onViewCertificate(video.id)}
+                  onClick={() => navigate({ to: `/certificate/${video.id}` })}
                 />
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        {/* Conflict Alerts Section */}
         {conflicts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

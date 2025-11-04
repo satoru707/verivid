@@ -12,13 +12,9 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 
-interface CertificatePageProps {
-  videoId: string;
-  onBack: () => void;
-}
-
-export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
+export function CertificatePage() {
   const certificateData = {
     title: 'My Creative Video Project',
     thumbnail:
@@ -28,6 +24,7 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
     blockchainHash:
       '0xf4d7b5c3a2e1f8d9c6b3a7e2f1d8c5b2a9e6d3f0c7b4a1e8d5c2b9f6a3e0d7c4',
   };
+  const navigate = useNavigate();
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -36,11 +33,10 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          onClick={onBack}
+          onClick={() => navigate({ to: '/' })}
           className="flex items-center gap-2 text-[#16213E]/60 hover:text-[#16213E] transition-colors mb-8 group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -49,7 +45,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
           </span>
         </motion.button>
 
-        {/* Certificate Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -57,7 +52,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
           className="glass-card rounded-2xl overflow-hidden p-10 relative shadow-xl"
         >
           <div className="relative z-10">
-            {/* Header */}
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#A7E6FF] to-[#C6A0F6] mb-4 glow-ice shadow-lg">
                 <Check className="w-8 h-8 text-[#16213E]" strokeWidth={2.5} />
@@ -76,7 +70,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
               </p>
             </div>
 
-            {/* Video Preview */}
             <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] rounded-2xl mb-6 overflow-hidden shadow-lg">
               <img
                 src={certificateData.thumbnail}
@@ -85,7 +78,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
               />
             </div>
 
-            {/* Title */}
             <h3
               className="text-[#16213E] mb-6 text-center"
               style={{ fontSize: '1.25rem', fontWeight: 700 }}
@@ -93,7 +85,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
               {certificateData.title}
             </h3>
 
-            {/* Details Grid */}
             <div className="space-y-4 mb-8">
               <div className="flex items-start gap-4 p-5 bg-white/60 rounded-xl">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#A7E6FF]/30 to-[#C6A0F6]/30 flex items-center justify-center flex-shrink-0">
@@ -173,7 +164,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
               </div>
             </div>
 
-            {/* Explorer Button */}
             <Button
               className="w-full bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12 mb-6"
               style={{ fontSize: '0.9375rem', fontWeight: 600 }}
@@ -182,7 +172,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
               View on Blockchain Explorer
             </Button>
 
-            {/* VeriVid Badge */}
             <div className="text-center">
               <div className="inline-flex items-center gap-2 glass-card rounded-full px-6 py-3 glow-lilac">
                 <Sparkles className="w-5 h-5 text-[#C6A0F6]" fill="#C6A0F6" />
@@ -197,7 +186,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
           </div>
         </motion.div>
 
-        {/* Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -222,7 +210,6 @@ export function CertificatePage({ videoId, onBack }: CertificatePageProps) {
           </Button>
         </motion.div>
 
-        {/* Info Box */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

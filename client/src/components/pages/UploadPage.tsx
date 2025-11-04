@@ -4,12 +4,9 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 
-interface UploadPageProps {
-  onVerificationComplete: (videoId: string) => void;
-}
-
-export function UploadPage({ onVerificationComplete }: UploadPageProps) {
+export function UploadPage() {
   const [step, setStep] = useState<
     'upload' | 'details' | 'verifying' | 'complete'
   >('upload');
@@ -17,6 +14,11 @@ export function UploadPage({ onVerificationComplete }: UploadPageProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [externalLink, setExternalLink] = useState('');
+  const navigate = useNavigate();
+
+  const onVerificationComplete = (videoId: string) => {
+    navigate({ to: `/certificate/${videoId}` });
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();

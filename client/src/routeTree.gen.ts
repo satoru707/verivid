@@ -9,55 +9,133 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UploadIndexRouteImport } from './routes/upload/index'
+import { Route as ProfileIndexRouteImport } from './routes/profile/index'
+import { Route as DocsIndexRouteImport } from './routes/docs/index'
+import { Route as ConflictIndexRouteImport } from './routes/conflict/index'
+import { Route as CheckAuthIndexRouteImport } from './routes/check-auth/index'
+import { Route as CertificateIndexRouteImport } from './routes/certificate/index'
+import { Route as AuthIndexRouteImport } from './routes/auth/index'
 
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadIndexRoute = UploadIndexRouteImport.update({
+  id: '/upload/',
+  path: '/upload/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/profile/',
+  path: '/profile/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsIndexRoute = DocsIndexRouteImport.update({
+  id: '/docs/',
+  path: '/docs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConflictIndexRoute = ConflictIndexRouteImport.update({
+  id: '/conflict/',
+  path: '/conflict/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckAuthIndexRoute = CheckAuthIndexRouteImport.update({
+  id: '/check-auth/',
+  path: '/check-auth/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificateIndexRoute = CertificateIndexRouteImport.update({
+  id: '/certificate/',
+  path: '/certificate/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/auth/',
+  path: '/auth/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/auth': typeof AuthIndexRoute
+  '/certificate': typeof CertificateIndexRoute
+  '/check-auth': typeof CheckAuthIndexRoute
+  '/conflict': typeof ConflictIndexRoute
+  '/docs': typeof DocsIndexRoute
+  '/profile': typeof ProfileIndexRoute
+  '/upload': typeof UploadIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/auth': typeof AuthIndexRoute
+  '/certificate': typeof CertificateIndexRoute
+  '/check-auth': typeof CheckAuthIndexRoute
+  '/conflict': typeof ConflictIndexRoute
+  '/docs': typeof DocsIndexRoute
+  '/profile': typeof ProfileIndexRoute
+  '/upload': typeof UploadIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/auth/': typeof AuthIndexRoute
+  '/certificate/': typeof CertificateIndexRoute
+  '/check-auth/': typeof CheckAuthIndexRoute
+  '/conflict/': typeof ConflictIndexRoute
+  '/docs/': typeof DocsIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/upload/': typeof UploadIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/certificate'
+    | '/check-auth'
+    | '/conflict'
+    | '/docs'
+    | '/profile'
+    | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to:
+    | '/'
+    | '/auth'
+    | '/certificate'
+    | '/check-auth'
+    | '/conflict'
+    | '/docs'
+    | '/profile'
+    | '/upload'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth/'
+    | '/certificate/'
+    | '/check-auth/'
+    | '/conflict/'
+    | '/docs/'
+    | '/profile/'
+    | '/upload/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
+  AuthIndexRoute: typeof AuthIndexRoute
+  CertificateIndexRoute: typeof CertificateIndexRoute
+  CheckAuthIndexRoute: typeof CheckAuthIndexRoute
+  ConflictIndexRoute: typeof ConflictIndexRoute
+  DocsIndexRoute: typeof DocsIndexRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
+  UploadIndexRoute: typeof UploadIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -65,12 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upload/': {
+      id: '/upload/'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof UploadIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/': {
+      id: '/docs/'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conflict/': {
+      id: '/conflict/'
+      path: '/conflict'
+      fullPath: '/conflict'
+      preLoaderRoute: typeof ConflictIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/check-auth/': {
+      id: '/check-auth/'
+      path: '/check-auth'
+      fullPath: '/check-auth'
+      preLoaderRoute: typeof CheckAuthIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certificate/': {
+      id: '/certificate/'
+      path: '/certificate'
+      fullPath: '/certificate'
+      preLoaderRoute: typeof CertificateIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/': {
+      id: '/auth/'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
+  AuthIndexRoute: AuthIndexRoute,
+  CertificateIndexRoute: CertificateIndexRoute,
+  CheckAuthIndexRoute: CheckAuthIndexRoute,
+  ConflictIndexRoute: ConflictIndexRoute,
+  DocsIndexRoute: DocsIndexRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
+  UploadIndexRoute: UploadIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

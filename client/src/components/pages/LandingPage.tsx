@@ -7,17 +7,13 @@ import {
   Sparkles,
   CheckCircle,
 } from 'lucide-react';
+import { Link} from '@tanstack/react-router'
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
 
-interface LandingPageProps {
-  onNavigate: (page: string) => void;
-}
-
-export function LandingPage({ onNavigate }: LandingPageProps) {
+export function LandingPage() {
   return (
     <div className="h-screen w-full overflow-hidden relative flex items-center justify-center">
-      {/* Animated gradient orbs */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#A7E6FF] rounded-full opacity-20 blur-3xl animate-float"></div>
       <div
         className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#C6A0F6] rounded-full opacity-20 blur-3xl animate-float"
@@ -26,13 +22,11 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
       <div className="max-w-7xl mx-auto px-6 sm:px-8 relative z-10 w-full">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left Content */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -48,7 +42,6 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </span>
             </motion.div>
 
-            {/* Hero Title */}
             <h1
               className="mb-6"
               style={{
@@ -63,7 +56,6 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               <span className="text-gradient">Unique — Prove It.</span>
             </h1>
 
-            {/* Subtitle */}
             <p
               className="text-[#16213E]/70 mb-10 max-w-xl"
               style={{ fontSize: '1.25rem', lineHeight: 1.6, fontWeight: 400 }}
@@ -73,27 +65,25 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               authenticity for every video.
             </p>
 
-            {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
+              <Link to='/upload'>
               <Button
-                onClick={() => onNavigate('verify')}
                 className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-2xl hover:scale-105 transition-all glow-ice border-0 h-14 px-8"
                 style={{ fontSize: '1.125rem', fontWeight: 600 }}
               >
                 Verify a Video
-              </Button>
+              </Button></Link>
+              <Link to='/check-auth'>
               <Button
-                onClick={() => onNavigate('check')}
                 variant="outline"
                 className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-14 px-8"
                 style={{ fontSize: '1.125rem', fontWeight: 600 }}
               >
                 <Search className="mr-2 w-5 h-5" />
                 Check Authenticity
-              </Button>
+              </Button></Link>
             </div>
 
-            {/* Trust Indicators */}
             <div className="grid grid-cols-3 gap-6">
               {[
                 {
