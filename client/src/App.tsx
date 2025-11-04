@@ -1,10 +1,18 @@
-import './App.css'
+import { RouterProvider, createRouter } from '@tanstack/react-router';
+import { routeTree } from './routeTree.gen';
 
-function App() {
-
-  return (
-    <p>Checkpoint!</p>
-  )
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
 }
 
-export default App
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  scrollRestoration: true,
+});
+
+export default function App() {
+  return <RouterProvider router={router} />;
+}
