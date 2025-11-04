@@ -4,15 +4,16 @@
   "description": "",
   "main": "index.js",
   "type": "module",
-"scripts": {
-  "dev": "ts-node main.ts",
-  "start": "nodemon --watch src --exec 'ts-node main.ts'"
-},
+  "scripts": {
+    "dev": "ts-node main.ts",
+    "start": "nodemon --watch src --exec 'ts-node main.ts'"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^24.10.0",
+    "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
