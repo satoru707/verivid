@@ -2,9 +2,11 @@ import { Outlet, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { SnowflakeBackground } from '../components/SnowflakeBackground';
 import { Navbar } from '../components/Navbar';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export const Route = createRootRoute({
   component: RootComponent,
+  errorComponent: ErrorBoundary,
 });
 
 function RootComponent() {

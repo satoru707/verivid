@@ -1,5 +1,4 @@
-import { Wallet, Mail, Sparkles, ArrowLeft } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
+import { Wallet, Mail, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
 
@@ -7,19 +6,6 @@ export function AuthPage() {
   return (
     <div className="min-h-screen pt-32 pb-20 flex items-center justify-center px-6 sm:px-8">
       <div className="max-w-md w-full">
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 text-[#16213E]/60 hover:text-[#16213E] transition-colors mb-8 group"
-        >
-          <Link to="/">
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span style={{ fontSize: '1rem', fontWeight: 500 }}>
-              Back to Home
-            </span>
-          </Link>
-        </motion.button>
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

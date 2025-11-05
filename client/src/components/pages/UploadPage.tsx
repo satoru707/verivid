@@ -5,17 +5,19 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
+import { useWallet } from '../../context/use-wallet';
 
 export function UploadPage() {
   const [step, setStep] = useState<
     'upload' | 'details' | 'verifying' | 'complete'
   >('upload');
+  const { walletAddress } = useWallet();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const navigate = useNavigate();
-
+  console.log(walletAddress);
   const onVerificationComplete = (videoId: string) => {
     navigate({ to: `/certificate/${videoId}` });
   };

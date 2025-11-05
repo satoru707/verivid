@@ -4,7 +4,6 @@ import {
   Calendar,
   Hash,
   User,
-  ArrowLeft,
   Download,
   Share2,
   Sparkles,
@@ -12,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
-import { useNavigate } from '@tanstack/react-router';
 
 export function CertificatePage() {
   const certificateData = {
@@ -24,7 +22,6 @@ export function CertificatePage() {
     blockchainHash:
       '0xf4d7b5c3a2e1f8d9c6b3a7e2f1d8c5b2a9e6d3f0c7b4a1e8d5c2b9f6a3e0d7c4',
   };
-  const navigate = useNavigate();
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -33,18 +30,6 @@ export function CertificatePage() {
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-4xl mx-auto">
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate({ to: '/' })}
-          className="flex items-center gap-2 text-[#16213E]/60 hover:text-[#16213E] transition-colors mb-8 group"
-        >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span style={{ fontSize: '1rem', fontWeight: 500 }}>
-            Back to Home
-          </span>
-        </motion.button>
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
