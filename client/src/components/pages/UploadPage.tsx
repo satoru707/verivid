@@ -1,23 +1,34 @@
+import type React from 'react';
+
 import { useState } from 'react';
-import { Upload, FileVideo, Sparkles, Shield, Lock, Globe } from 'lucide-react';
+import {
+  Upload,
+  FileVideo,
+  Sparkles,
+  Shield,
+  Lock,
+  Globe,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
 import { useWallet } from '../../context/use-wallet';
+import { apiService } from '../../services/api.service';
 
 export function UploadPage() {
   const [step, setStep] = useState<
-    'upload' | 'details' | 'verifying' | 'complete'
+    'upload' | 'details' | 'verifying' | 'complete' | 'not-connected'
   >('upload');
-  const { walletAddress } = useWallet();
+  const { walletAddress, isConnected } = useWallet();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const navigate = useNavigate();
-  console.log(walletAddress);
+
   const onVerificationComplete = (videoId: string) => {
     navigate({ to: `/certificate/${videoId}` });
   };
@@ -26,6 +37,11 @@ export function UploadPage() {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!isConnected) {
+      setStep('not-connected');
+      return;
+    }
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0]);
       setStep('details');
@@ -33,21 +49,142 @@ export function UploadPage() {
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isConnected) {
+      setStep('not-connected');
+      return;
+    }
+
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setStep('details');
     }
   };
 
-  const handleVerify = () => {
-    setStep('verifying');
-    setTimeout(() => setStep('complete'), 2500);
+  const handleVerify = async () => {
+    if (!file || !title) {
+      alert('Please provide both file and title');
+      return;
+    }
+
+    if (!isConnected || !walletAddress) {
+      setStep('not-connected');
+      return;
+    }
+
+    try {
+      setStep('verifying');
+
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // Check for duplicate before uploading
+      try {
+        const duplicateCheck = await apiService.checkDuplicate(hashHex);
+        if (duplicateCheck.isDuplicate) {
+          alert(
+            `Video already exists: /video/${duplicateCheck.existingVideoId}`
+          );
+          setStep('details');
+          return;
+        }
+      } catch (dupError) {
+        console.warn('[Upload] Duplicate check failed:', dupError);
+        // Continue anyway - it's not critical
+      }
+
+      const uploadInit = await apiService.initializeUpload(file);
+
+      const formData = new FormData();
+      Object.entries(uploadInit.fields || {}).forEach(([key, value]) => {
+        formData.append(key, value as string);
+      });
+      formData.append('file', file);
+
+      const uploadResponse = await fetch(uploadInit.uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('File upload failed');
+      }
+
+      await apiService.completeUpload(
+        uploadInit.videoId,
+        uploadInit.uploadUrl,
+        {
+          sha256: hashHex,
+          durationSec: 0,
+        }
+      );
+
+      const verifyPrep = await apiService.prepareVerification(
+        uploadInit.videoId
+      );
+
+      // TODO: Sign and submit to blockchain, then call confirmVerification
+
+      setStep('complete');
+      setTimeout(() => onVerificationComplete(uploadInit.videoId), 1500);
+    } catch (error: any) {
+      console.error('[Upload] Verification failed:', error);
+      alert(error.message || 'Upload failed');
+      setStep('details');
+    }
   };
 
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-5xl mx-auto">
         <AnimatePresence mode="wait">
+          {step === 'not-connected' && (
+            <motion.div
+              key="not-connected"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="max-w-md mx-auto"
+            >
+              <div className="glass-card rounded-2xl p-8 border-[#C6A0F6]/40">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="flex-shrink-0">
+                    <AlertCircle
+                      className="w-6 h-6 text-[#C6A0F6]"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <div>
+                    <h3
+                      className="text-[#16213E] mb-1"
+                      style={{ fontSize: '1.125rem', fontWeight: 700 }}
+                    >
+                      Wallet Not Connected
+                    </h3>
+                    <p
+                      className="text-[#16213E]/70"
+                      style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}
+                    >
+                      Please connect your MetaMask wallet to upload and verify
+                      your videos.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setStep('upload')}
+                  className="w-full bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12"
+                  style={{ fontSize: '0.9375rem', fontWeight: 600 }}
+                >
+                  Go Back
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
           {/* Step 1: Upload */}
           {step === 'upload' && (
             <motion.div
@@ -323,7 +460,7 @@ export function UploadPage() {
                     animate={{ rotate: 360 }}
                     transition={{
                       duration: 3,
-                      repeat: Infinity,
+                      repeat: Number.POSITIVE_INFINITY,
                       ease: 'linear',
                     }}
                     className="w-20 h-20"

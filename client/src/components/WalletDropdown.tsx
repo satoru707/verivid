@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -20,6 +21,7 @@ export function WalletDropdown({
 }: WalletDropdownProps) {
   const { walletAddress, disconnectWallet } = useWallet();
   const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCopyAddress = () => {
     if (walletAddress) {
@@ -29,8 +31,15 @@ export function WalletDropdown({
     }
   };
 
-  const handleDisconnect = () => {
-    disconnectWallet();
+  const handleDisconnect = async () => {
+    setIsLoading(true);
+    try {
+      await disconnectWallet();
+    } catch (err) {
+      console.error('[WalletDropdown] Disconnect error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -40,7 +49,6 @@ export function WalletDropdown({
         className="glass-card border-[#A7E6FF]/40 w-64 p-2"
         align="end"
       >
-        {/* Wallet Address */}
         <div className="px-3 py-3 mb-2">
           <div
             className="text-[#16213E]/60 mb-2"
@@ -77,7 +85,6 @@ export function WalletDropdown({
 
         <DropdownMenuSeparator className="bg-[#A7E6FF]/20" />
 
-        {/* Profile */}
         <DropdownMenuItem
           onSelect={onNavigateToProfile}
           className="cursor-pointer px-3 py-2.5 rounded-lg hover:bg-white/60 focus:bg-white/60"
@@ -93,14 +100,14 @@ export function WalletDropdown({
 
         <DropdownMenuSeparator className="bg-[#A7E6FF]/20" />
 
-        {/* Disconnect */}
         <DropdownMenuItem
           onSelect={handleDisconnect}
           className="cursor-pointer px-3 py-2.5 rounded-lg hover:bg-red-50 focus:bg-red-50 text-red-600"
+          disabled={isLoading}
         >
           <LogOut className="w-4 h-4 mr-3" />
           <span style={{ fontSize: '0.9375rem', fontWeight: 500 }}>
-            Disconnect Wallet
+            {isLoading ? 'Disconnecting...' : 'Disconnect Wallet'}
           </span>
         </DropdownMenuItem>
       </DropdownMenuContent>

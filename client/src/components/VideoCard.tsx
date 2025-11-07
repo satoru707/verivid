@@ -23,14 +23,12 @@ export function VideoCard({
       className="glass-card rounded-2xl overflow-hidden cursor-pointer group shadow-lg hover:shadow-xl transition-all"
       onClick={onClick}
     >
-      {/* Thumbnail */}
       <div className="relative aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] overflow-hidden">
         <img
           src={thumbnail}
           alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        {/* Verified Badge */}
         {verified && (
           <div className="absolute top-3 right-3">
             <div className="relative">
@@ -52,7 +50,6 @@ export function VideoCard({
         )}
       </div>
 
-      {/* Content */}
       <div className="p-5">
         <h3
           className="text-[#16213E] mb-3 line-clamp-2 group-hover:text-[#A7E6FF] transition-colors"

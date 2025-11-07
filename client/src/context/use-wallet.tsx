@@ -1,18 +1,24 @@
 import { useContext, createContext } from 'react';
 
-interface UserProfile {
+export interface UserProfile {
+  id?: string;
+  wallet?: string;
   username?: string;
   email?: string;
   bio?: string;
+  avatarUrl?: string;
 }
 
 interface WalletContextType {
   isConnected: boolean;
+  isLoading: boolean;
+  error: string | null;
   walletAddress: string | null;
   userProfile: UserProfile;
-  connectWallet: (address: string) => void;
-  disconnectWallet: () => void;
-  updateProfile: (profile: Partial<UserProfile>) => void;
+  connectWallet: () => Promise<string | null>;
+  disconnectWallet: () => Promise<void>;
+  updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
+  clearError: () => void;
 }
 
 export const WalletContext = createContext<WalletContextType | undefined>(

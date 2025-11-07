@@ -19,21 +19,19 @@ export function CertificateCard({ title, thumbnail, owner, timestamp, blockchain
 
   return (
     <div className="glass-card rounded-3xl overflow-hidden max-w-2xl w-full mx-auto p-8 relative">
-      {/* Shimmer effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent shimmer-animation pointer-events-none"></div>
-      
-      {/* Content */}
+
       <div className="relative z-10">
-        {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-3 mb-3">
             <VerificationBadge size="lg" />
           </div>
           <h2 className="text-[#16213E] mb-2">Certificate of Authenticity</h2>
-          <p className="text-[#16213E]/60">Blockchain-verified ownership proof</p>
+          <p className="text-[#16213E]/60">
+            Blockchain-verified ownership proof
+          </p>
         </div>
 
-        {/* Video Preview */}
         <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] rounded-2xl mb-6 overflow-hidden">
           {thumbnail ? (
             <ImageWithFallback
@@ -50,15 +48,18 @@ export function CertificateCard({ title, thumbnail, owner, timestamp, blockchain
           )}
         </div>
 
-        {/* Title */}
         <h3 className="text-[#16213E] mb-6 text-center">{title}</h3>
 
-        {/* Details */}
         <div className="space-y-4 mb-6">
           <div className="flex items-start gap-3 p-4 bg-white/30 rounded-xl">
             <User className="w-5 h-5 text-[#16213E] mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-[#16213E]/60 mb-1" style={{ fontSize: '0.875rem' }}>Owner</div>
+              <div
+                className="text-[#16213E]/60 mb-1"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Owner
+              </div>
               <div className="text-[#16213E] break-all">{owner}</div>
             </div>
             <button
@@ -72,7 +73,12 @@ export function CertificateCard({ title, thumbnail, owner, timestamp, blockchain
           <div className="flex items-start gap-3 p-4 bg-white/30 rounded-xl">
             <Calendar className="w-5 h-5 text-[#16213E] mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <div className="text-[#16213E]/60 mb-1" style={{ fontSize: '0.875rem' }}>Verification Date</div>
+              <div
+                className="text-[#16213E]/60 mb-1"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Verification Date
+              </div>
               <div className="text-[#16213E]">{timestamp}</div>
             </div>
           </div>
@@ -80,8 +86,18 @@ export function CertificateCard({ title, thumbnail, owner, timestamp, blockchain
           <div className="flex items-start gap-3 p-4 bg-white/30 rounded-xl">
             <Hash className="w-5 h-5 text-[#16213E] mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-[#16213E]/60 mb-1" style={{ fontSize: '0.875rem' }}>Blockchain Hash</div>
-              <div className="text-[#16213E] break-all font-mono" style={{ fontSize: '0.875rem' }}>{blockchainHash}</div>
+              <div
+                className="text-[#16213E]/60 mb-1"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Blockchain Hash
+              </div>
+              <div
+                className="text-[#16213E] break-all font-mono"
+                style={{ fontSize: '0.875rem' }}
+              >
+                {blockchainHash}
+              </div>
             </div>
             <button
               onClick={() => copyToClipboard(blockchainHash)}
@@ -92,7 +108,6 @@ export function CertificateCard({ title, thumbnail, owner, timestamp, blockchain
           </div>
         </div>
 
-        {/* Action Button */}
         <Button
           onClick={onViewExplorer}
           className="w-full bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-lg transition-all glow-ice"
@@ -101,10 +116,11 @@ export function CertificateCard({ title, thumbnail, owner, timestamp, blockchain
           View on Blockchain Explorer
         </Button>
 
-        {/* VeriVid Badge */}
         <div className="mt-8 text-center">
           <div className="inline-block glass rounded-full px-6 py-3 glow-lilac">
-            <span className="text-[#C6A0F6]" style={{ fontWeight: 600 }}>🏔️ VeriVid Certified</span>
+            <span className="text-[#C6A0F6]" style={{ fontWeight: 600 }}>
+              🏔️ VeriVid Certified
+            </span>
           </div>
         </div>
       </div>

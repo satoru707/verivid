@@ -32,51 +32,31 @@ export function WalletConnectModal({
     | 'recovery-sending'
     | 'recovery-sent'
   >('select');
-  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [recoveryEmail, setRecoveryEmail] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setStep('select');
-      setSelectedWallet(null);
       setRecoveryEmail('');
     }
   }, [isOpen]);
 
-  const wallets = [
-    {
-      id: 'metamask',
-      name: 'MetaMask',
-      icon: '🦊',
-      description: 'Connect using MetaMask',
-    },
-    {
-      id: 'walletconnect',
-      name: 'WalletConnect',
-      icon: '🔗',
-      description: 'Scan with WalletConnect',
-    },
-    {
-      id: 'coinbase',
-      name: 'Coinbase Wallet',
-      icon: '💼',
-      description: 'Connect Coinbase Wallet',
-    },
-  ];
-
-  const handleWalletSelect = (walletId: string) => {
-    setSelectedWallet(walletId);
+  const handleConnectMetaMask = () => {
     setStep('signing');
-    console.log(selectedWallet);
-    setTimeout(() => {
-      const mockAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
-      connectWallet(mockAddress);
-      setStep('success');
-
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-    }, 2000);
+    (async () => {
+      try {
+        const address = await connectWallet();
+        if (address) {
+          setStep('success');
+          setTimeout(() => onClose(), 1500);
+        } else {
+          setStep('select');
+        }
+      } catch (e: any) {
+        console.error('[WalletModal] Connect failed:', e);
+        setStep('select');
+      }
+    })();
   };
 
   const handleRecoveryClick = () => {
@@ -93,7 +73,6 @@ export function WalletConnectModal({
 
     setStep('recovery-sending');
 
-    // Simulate sending email
     setTimeout(() => {
       setStep('recovery-sent');
     }, 1500);
@@ -113,7 +92,6 @@ export function WalletConnectModal({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="glass-card border-[#A7E6FF]/40 max-w-md p-0 overflow-hidden">
         <AnimatePresence mode="wait">
-          {/* Step 1: Select Wallet */}
           {step === 'select' && (
             <motion.div
               key="select"
@@ -141,38 +119,34 @@ export function WalletConnectModal({
                   className="text-[#16213E]/70"
                   style={{ fontSize: '0.9375rem' }}
                 >
-                  Choose your preferred wallet to get started
+                  Connect your MetaMask wallet to get started
                 </p>
               </DialogHeader>
 
               <div className="space-y-3 mb-6">
-                {wallets.map((wallet) => (
-                  <button
-                    key={wallet.id}
-                    type="button"
-                    onClick={() => handleWalletSelect(wallet.id)}
-                    className="w-full glass rounded-xl p-5 flex items-center gap-4 hover:bg-white/60 transition-all group text-left"
-                  >
-                    <div className="text-3xl">{wallet.icon}</div>
-                    <div className="flex-1">
-                      <div
-                        className="text-[#16213E] mb-1 group-hover:text-[#A7E6FF] transition-colors"
-                        style={{ fontSize: '1rem', fontWeight: 600 }}
-                      >
-                        {wallet.name}
-                      </div>
-                      <div
-                        className="text-[#16213E]/60"
-                        style={{ fontSize: '0.875rem' }}
-                      >
-                        {wallet.description}
-                      </div>
+                <button
+                  type="button"
+                  onClick={handleConnectMetaMask}
+                  className="w-full glass rounded-xl p-5 flex items-center gap-4 hover:bg-white/60 transition-all group text-left"
+                >
+                  <div className="text-3xl">🦊</div>
+                  <div className="flex-1">
+                    <div
+                      className="text-[#16213E] mb-1 group-hover:text-[#A7E6FF] transition-colors"
+                      style={{ fontSize: '1rem', fontWeight: 600 }}
+                    >
+                      MetaMask
                     </div>
-                  </button>
-                ))}
+                    <div
+                      className="text-[#16213E]/60"
+                      style={{ fontSize: '0.875rem' }}
+                    >
+                      Desktop browser or mobile app with QR scan
+                    </div>
+                  </div>
+                </button>
               </div>
 
-              {/* Recovery Link */}
               <div className="pt-4 border-t border-[#A7E6FF]/20">
                 <button
                   type="button"
@@ -197,7 +171,6 @@ export function WalletConnectModal({
             </motion.div>
           )}
 
-          {/* Step 2: Signing */}
           {step === 'signing' && (
             <motion.div
               key="signing"
@@ -209,7 +182,11 @@ export function WalletConnectModal({
               <div className="relative inline-flex items-center justify-center mb-6">
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  transition={{
+                    duration: 3,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: 'linear',
+                  }}
                   className="w-20 h-20"
                 >
                   <svg className="w-20 h-20" viewBox="0 0 80 80">
@@ -255,12 +232,11 @@ export function WalletConnectModal({
                 className="text-[#16213E]/60"
                 style={{ fontSize: '0.9375rem' }}
               >
-                Confirm the connection in your wallet...
+                Confirm the connection in your MetaMask wallet...
               </p>
             </motion.div>
           )}
 
-          {/* Step 3: Success */}
           {step === 'success' && (
             <motion.div
               key="success"
@@ -296,7 +272,6 @@ export function WalletConnectModal({
             </motion.div>
           )}
 
-          {/* Step 4: Recovery Email Input */}
           {step === 'recovery' && (
             <motion.div
               key="recovery"
@@ -378,7 +353,6 @@ export function WalletConnectModal({
             </motion.div>
           )}
 
-          {/* Step 5: Recovery Sending */}
           {step === 'recovery-sending' && (
             <motion.div
               key="recovery-sending"
@@ -390,7 +364,11 @@ export function WalletConnectModal({
               <div className="relative inline-flex items-center justify-center mb-6">
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  transition={{
+                    duration: 3,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: 'linear',
+                  }}
                   className="w-20 h-20"
                 >
                   <svg className="w-20 h-20" viewBox="0 0 80 80">
@@ -438,7 +416,6 @@ export function WalletConnectModal({
             </motion.div>
           )}
 
-          {/* Step 6: Recovery Sent */}
           {step === 'recovery-sent' && (
             <motion.div
               key="recovery-sent"

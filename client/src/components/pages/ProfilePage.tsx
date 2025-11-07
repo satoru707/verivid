@@ -1,77 +1,145 @@
-import { Calendar, Shield, Flag, Sparkles } from 'lucide-react';
+/**
+ * Complete rewrite to fetch real user data and integrate with auth system
+ */
+import { useEffect, useState } from 'react';
+import { Calendar, Shield, Flag, Sparkles, LogOut } from 'lucide-react';
 import { VideoCard } from '../VideoCard';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { motion } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
+import { useWallet } from '../../context/use-wallet';
+import { apiService } from '../../services/api.service';
+
+interface Video {
+  id: string;
+  title: string;
+  thumbnail: string;
+  date: string;
+  verified: boolean;
+}
+
+interface Conflict {
+  id: string;
+  title: string;
+  status: 'resolved' | 'pending';
+  date: string;
+}
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const profile = {
-    address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    memberSince: 'June 2024',
-    verifiedCount: 12,
-  };
+  const {
+    walletAddress,
+    disconnectWallet,
+    isLoading: authLoading,
+  } = useWallet();
+  const [profile, setProfile] = useState<any>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const verifiedVideos = [
-    {
-      id: '1',
-      title: 'Summer Vacation Vlog 2024',
-      thumbnail:
-        'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
-      date: 'October 15, 2024',
-      verified: true,
-    },
-    {
-      id: '2',
-      title: 'Product Launch Presentation',
-      thumbnail:
-        'https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=800',
-      date: 'September 3, 2024',
-      verified: true,
-    },
-    {
-      id: '3',
-      title: 'Creative Time-lapse Project',
-      thumbnail:
-        'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=800',
-      date: 'August 22, 2024',
-      verified: true,
-    },
-    {
-      id: '4',
-      title: 'Documentary Series Episode 1',
-      thumbnail:
-        'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=800',
-      date: 'July 10, 2024',
-      verified: true,
-    },
-    {
-      id: '5',
-      title: 'Music Video Production',
-      thumbnail:
-        'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
-      date: 'June 18, 2024',
-      verified: true,
-    },
-    {
-      id: '6',
-      title: 'Tutorial Series Part 1',
-      thumbnail:
-        'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800',
-      date: 'June 5, 2024',
-      verified: true,
-    },
-  ];
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  const conflicts = [
-    {
-      id: '1',
-      title: 'Potential duplicate detected',
-      status: 'resolved' as const,
-      date: 'October 20, 2024',
-    },
-  ];
+        if (walletAddress) {
+          const userResponse = await apiService.getCurrentUser();
+          if (userResponse.user) {
+            setProfile({
+              address: userResponse.user.wallet,
+              memberSince: userResponse.user.createdAt
+                ? new Date(userResponse.user.createdAt).toLocaleDateString(
+                    'en-US',
+                    {
+                      year: 'numeric',
+                      month: 'long',
+                    }
+                  )
+                : 'Recently',
+              username: userResponse.user.username,
+              bio: userResponse.user.bio,
+            });
+
+            const videosResponse = await apiService.listVideos();
+            if (videosResponse.videos) {
+              setVideos(
+                videosResponse.videos.map((v: any) => ({
+                  id: v.id,
+                  title: v.originalName,
+                  thumbnail: v.storageUrl || '/video-production-setup.png',
+                  date: v.verifiedAt
+                    ? new Date(v.verifiedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    : new Date(v.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }),
+                  verified: v.verified,
+                }))
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Profile] Load error:', err);
+        setError('Failed to load profile');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [walletAddress]);
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{
+                duration: 3,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: 'linear',
+              }}
+              className="w-12 h-12"
+            >
+              <Sparkles className="w-12 h-12 text-[#A7E6FF]" />
+            </motion.div>
+          </div>
+          <p className="mt-4 text-[#16213E]/70">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profile || !walletAddress) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#16213E] text-lg mb-4">
+            {error || 'Please connect your wallet first'}
+          </p>
+          <Button
+            onClick={() => navigate({ to: '/' })}
+            className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12 px-8"
+          >
+            Go Back Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const verifiedCount = videos.filter((v) => v.verified).length;
 
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
@@ -87,7 +155,7 @@ export function ProfilePage() {
                 className="bg-gradient-to-br from-[#A7E6FF] to-[#C6A0F6] text-[#16213E]"
                 style={{ fontSize: '1.5rem', fontWeight: 700 }}
               >
-                {profile.address.slice(2, 4).toUpperCase()}
+                {profile.address?.slice(2, 4).toUpperCase()}
               </AvatarFallback>
             </Avatar>
 
@@ -97,7 +165,7 @@ export function ProfilePage() {
                   className="text-[#16213E]"
                   style={{ fontSize: '1.5rem', fontWeight: 800 }}
                 >
-                  {profile.address}
+                  {profile.username || profile.address}
                 </h2>
                 <div className="glass rounded-full px-4 py-1.5">
                   <span
@@ -119,20 +187,34 @@ export function ProfilePage() {
                 <div className="flex items-center gap-2 text-[#16213E]/70">
                   <Shield className="w-4 h-4" />
                   <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                    {profile.verifiedCount} verified videos
+                    {verifiedCount} verified{' '}
+                    {verifiedCount === 1 ? 'video' : 'videos'}
                   </span>
                 </div>
               </div>
 
-              <p
-                className="text-[#16213E]/70 max-w-2xl"
-                style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}
-              >
-                Independent creator protecting original content through
-                blockchain verification. Every piece of content is unique and
-                authenticated.
-              </p>
+              {profile.bio && (
+                <p
+                  className="text-[#16213E]/70 max-w-2xl"
+                  style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}
+                >
+                  {profile.bio}
+                </p>
+              )}
             </div>
+
+            <Button
+              onClick={async () => {
+                await disconnectWallet();
+                navigate({ to: '/' });
+              }}
+              variant="outline"
+              className="glass text-red-600 border-red-200 hover:bg-red-50 h-12 px-6"
+              style={{ fontSize: '0.875rem', fontWeight: 600 }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Disconnect
+            </Button>
           </div>
         </motion.div>
 
@@ -157,26 +239,38 @@ export function ProfilePage() {
                 className="text-[#16213E]/70"
                 style={{ fontSize: '0.875rem', fontWeight: 600 }}
               >
-                {verifiedVideos.length} total
+                {videos.length} total
               </span>
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {verifiedVideos.map((video, i) => (
-              <motion.div
-                key={video.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.05 }}
+          {videos.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-[#16213E]/70 mb-4">No videos verified yet</p>
+              <Button
+                onClick={() => navigate({ to: '/upload' })}
+                className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12 px-8"
               >
-                <VideoCard
-                  {...video}
-                  onClick={() => navigate({ to: `/certificate/${video.id}` })}
-                />
-              </motion.div>
-            ))}
-          </div>
+                Verify Your First Video
+              </Button>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {videos.map((video, i) => (
+                <motion.div
+                  key={video.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.05 }}
+                >
+                  <VideoCard
+                    {...video}
+                    onClick={() => navigate({ to: `/certificate/${video.id}` })}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {conflicts.length > 0 && (
@@ -229,7 +323,7 @@ export function ProfilePage() {
                     </div>
                     <Button
                       variant="outline"
-                      className="glass text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-10 px-5"
+                      className="glass text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-10 px-5 bg-transparent"
                       style={{ fontSize: '0.875rem', fontWeight: 600 }}
                     >
                       View Details
@@ -250,7 +344,7 @@ export function ProfilePage() {
         >
           <Button
             variant="outline"
-            className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 px-6"
+            className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 px-6 bg-transparent"
             style={{ fontSize: '0.9375rem', fontWeight: 600 }}
           >
             <Flag className="w-4 h-4 mr-2" />

@@ -7,11 +7,14 @@ import {
   Sparkles,
   CheckCircle,
 } from 'lucide-react';
-import { Link} from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
+import { useWallet } from '../../context/use-wallet';
 
 export function LandingPage() {
+  const { isConnected } = useWallet();
+
   return (
     <div className="h-screen w-full overflow-hidden relative flex items-center justify-center">
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#A7E6FF] rounded-full opacity-20 blur-3xl animate-float"></div>
@@ -66,22 +69,24 @@ export function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
-              <Link to='/upload'>
-              <Button
-                className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-2xl hover:scale-105 transition-all glow-ice border-0 h-14 px-8"
-                style={{ fontSize: '1.125rem', fontWeight: 600 }}
-              >
-                Verify a Video
-              </Button></Link>
-              <Link to='/check-auth'>
-              <Button
-                variant="outline"
-                className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-14 px-8"
-                style={{ fontSize: '1.125rem', fontWeight: 600 }}
-              >
-                <Search className="mr-2 w-5 h-5" />
-                Check Authenticity
-              </Button></Link>
+              <Link to={isConnected ? '/upload' : '/auth'}>
+                <Button
+                  className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-2xl hover:scale-105 transition-all glow-ice border-0 h-14 px-8"
+                  style={{ fontSize: '1.125rem', fontWeight: 600 }}
+                >
+                  {isConnected ? 'Verify a Video' : 'Get Started'}
+                </Button>
+              </Link>
+              <Link to="/check-auth">
+                <Button
+                  variant="outline"
+                  className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-14 px-8 bg-transparent"
+                  style={{ fontSize: '1.125rem', fontWeight: 600 }}
+                >
+                  <Search className="mr-2 w-5 h-5" />
+                  Check Authenticity
+                </Button>
+              </Link>
             </div>
 
             <div className="grid grid-cols-3 gap-6">
@@ -126,20 +131,16 @@ export function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Right Visual */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative hidden lg:block"
           >
-            {/* Main Card */}
             <div className="glass-card rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-              {/* Shimmer effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent shimmer-animation"></div>
 
               <div className="relative z-10">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#A7E6FF] to-[#C6A0F6] flex items-center justify-center glow-ice">
@@ -173,7 +174,6 @@ export function LandingPage() {
                   </div>
                 </div>
 
-                {/* Video Preview */}
                 <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] rounded-2xl mb-6 flex items-center justify-center overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-[#A7E6FF]/30 to-[#C6A0F6]/30"></div>
                   <div className="relative w-20 h-20 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center">
@@ -181,7 +181,6 @@ export function LandingPage() {
                   </div>
                 </div>
 
-                {/* Info Grid */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-4 bg-white/50 rounded-xl">
                     <span
@@ -227,7 +226,6 @@ export function LandingPage() {
                   </div>
                 </div>
 
-                {/* Badge */}
                 <div className="mt-6 text-center">
                   <div className="inline-flex items-center gap-2 glass-card rounded-full px-5 py-3 glow-lilac">
                     <Sparkles
@@ -245,17 +243,20 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Floating elements */}
             <motion.div
               animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity }}
+              transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
               className="absolute -top-6 -left-6 glass-strong rounded-2xl p-4 shadow-xl"
             >
               <Upload className="w-8 h-8 text-[#A7E6FF]" />
             </motion.div>
             <motion.div
               animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+              transition={{
+                duration: 3,
+                repeat: Number.POSITIVE_INFINITY,
+                delay: 1,
+              }}
               className="absolute -bottom-6 -right-6 glass-strong rounded-2xl p-4 shadow-xl"
             >
               <Shield className="w-8 h-8 text-[#C6A0F6]" />
@@ -263,7 +264,6 @@ export function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Bottom Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

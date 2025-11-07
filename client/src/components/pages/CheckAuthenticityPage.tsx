@@ -13,6 +13,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
+import { apiService } from '../../services/api.service';
 
 export function CheckAuthenticityPage() {
   const [searchType, setSearchType] = useState<'file' | 'link'>('link');
@@ -23,14 +24,33 @@ export function CheckAuthenticityPage() {
   >(null);
   const navigate = useNavigate();
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setIsScanning(true);
     setSearchResult(null);
 
-    setTimeout(() => {
+    try {
+      if (searchType === 'link') {
+        const videoResponse = (await apiService.getVideoDetails(
+          searchValue
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        )) as any;
+        if (videoResponse.video && videoResponse.video.verified) {
+          setSearchResult('verified');
+        } else {
+          setSearchResult('not-found');
+        }
+      } else {
+        // File upload handling
+        // Compute hash and search
+        // TODO: Implement file hashing and verification lookup
+        setSearchResult(Math.random() > 0.5 ? 'verified' : 'not-found');
+      }
+    } catch (err) {
+      console.error('[CheckAuth] Search failed:', err);
+      setSearchResult('not-found');
+    } finally {
       setIsScanning(false);
-      setSearchResult(Math.random() > 0.5 ? 'verified' : 'not-found');
-    }, 1800);
+    }
   };
 
   const mockVerifiedData = {
@@ -46,7 +66,6 @@ export function CheckAuthenticityPage() {
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -79,7 +98,6 @@ export function CheckAuthenticityPage() {
           </p>
         </motion.div>
 
-        {/* Main Search Interface */}
         <AnimatePresence mode="wait">
           {!isScanning && !searchResult && (
             <motion.div
@@ -88,7 +106,6 @@ export function CheckAuthenticityPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98 }}
             >
-              {/* Search Type Selector */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <button
                   onClick={() => setSearchType('link')}
@@ -155,7 +172,6 @@ export function CheckAuthenticityPage() {
                 </button>
               </div>
 
-              {/* Input Area */}
               <motion.div layout className="glass-card rounded-2xl p-8 mb-6">
                 {searchType === 'link' ? (
                   <div>
@@ -212,7 +228,6 @@ export function CheckAuthenticityPage() {
             </motion.div>
           )}
 
-          {/* Scanning State */}
           {isScanning && (
             <motion.div
               key="scanning"
@@ -222,13 +237,12 @@ export function CheckAuthenticityPage() {
               className="max-w-md mx-auto"
             >
               <div className="glass-card rounded-2xl p-12 text-center">
-                {/* Animated Icon */}
                 <div className="relative inline-flex items-center justify-center mb-6">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{
                       duration: 3,
-                      repeat: Infinity,
+                      repeat: Number.POSITIVE_INFINITY,
                       ease: 'linear',
                     }}
                     className="w-20 h-20"
@@ -282,7 +296,6 @@ export function CheckAuthenticityPage() {
             </motion.div>
           )}
 
-          {/* Verified Result */}
           {searchResult === 'verified' && (
             <motion.div
               key="verified"
@@ -322,11 +335,10 @@ export function CheckAuthenticityPage() {
                   </div>
                 </div>
 
-                {/* Video Preview */}
                 <div className="glass rounded-2xl overflow-hidden mb-6">
                   <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] relative">
                     <img
-                      src={mockVerifiedData.thumbnail}
+                      src={mockVerifiedData.thumbnail || '/placeholder.svg'}
                       alt={mockVerifiedData.title}
                       className="w-full h-full object-cover"
                     />

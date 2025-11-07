@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   ExternalLink,
   Copy,
@@ -11,21 +12,115 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
+import { useParams, useNavigate } from '@tanstack/react-router';
+import { apiService } from '../../services/api.service';
+
+interface CertificateData {
+  id: string;
+  title: string;
+  thumbnail: string;
+  owner: string;
+  timestamp: string;
+  blockchainHash: string;
+  txHash?: string;
+  metadataUri?: string;
+}
 
 export function CertificatePage() {
-  const certificateData = {
-    title: 'My Creative Video Project',
-    thumbnail:
-      'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=800',
-    owner: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    timestamp: 'November 3, 2025 at 2:30 PM UTC',
-    blockchainHash:
-      '0xf4d7b5c3a2e1f8d9c6b3a7e2f1d8c5b2a9e6d3f0c7b4a1e8d5c2b9f6a3e0d7c4',
+  const navigate = useNavigate();
+  const params = useParams({ from: '/certificate/$certificateId' });
+  const [certificate, setCertificate] = useState<CertificateData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadCertificate = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const certificateId = params?.certificateId;
+        if (!certificateId) {
+          setError('Invalid certificate ID');
+          return;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await apiService.getVideoDetails(certificateId) as any
+        if (response.video) {
+          const video = response.video;
+          setCertificate({
+            id: video.id,
+            title: video.originalName,
+            thumbnail: video.storageUrl || '/video-production-setup.png',
+            owner: video.uploaderId,
+            timestamp: new Date(
+              video.verifiedAt || new Date()
+            ).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'UTC',
+            }),
+            blockchainHash: video.sha256,
+            txHash: video.txHash,
+            metadataUri: video.metadataUri,
+          });
+        }
+      } catch (err) {
+        console.error('[Certificate] Load error:', err);
+        setError('Failed to load certificate');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCertificate();
+  }, [params?.certificateId]);
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{
+            duration: 3,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: 'linear',
+          }}
+        >
+          <Sparkles className="w-12 h-12 text-[#A7E6FF]" />
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (error || !certificate) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#16213E] text-lg mb-4">
+            {error || 'Certificate not found'}
+          </p>
+          <Button
+            onClick={() => navigate({ to: '/' })}
+            className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] border-0"
+          >
+            Go Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
@@ -57,8 +152,8 @@ export function CertificatePage() {
 
             <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] rounded-2xl mb-6 overflow-hidden shadow-lg">
               <img
-                src={certificateData.thumbnail}
-                alt={certificateData.title}
+                src={certificate.thumbnail || '/placeholder.svg'}
+                alt={certificate.title}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -67,7 +162,7 @@ export function CertificatePage() {
               className="text-[#16213E] mb-6 text-center"
               style={{ fontSize: '1.25rem', fontWeight: 700 }}
             >
-              {certificateData.title}
+              {certificate.title}
             </h3>
 
             <div className="space-y-4 mb-8">
@@ -86,14 +181,18 @@ export function CertificatePage() {
                     className="text-[#16213E] break-all font-mono"
                     style={{ fontSize: '0.9375rem', fontWeight: 600 }}
                   >
-                    {certificateData.owner}
+                    {certificate.owner}
                   </div>
                 </div>
                 <button
-                  onClick={() => copyToClipboard(certificateData.owner)}
+                  onClick={() => copyToClipboard(certificate.owner, 'owner')}
                   className="p-2 hover:bg-white/70 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <Copy className="w-4 h-4 text-[#16213E]" />
+                  {copied === 'owner' ? (
+                    <Check className="w-4 h-4 text-[#A7E6FF]" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-[#16213E]" />
+                  )}
                 </button>
               </div>
 
@@ -115,7 +214,7 @@ export function CertificatePage() {
                     className="text-[#16213E]"
                     style={{ fontSize: '0.9375rem', fontWeight: 600 }}
                   >
-                    {certificateData.timestamp}
+                    {certificate.timestamp}
                   </div>
                 </div>
               </div>
@@ -129,22 +228,26 @@ export function CertificatePage() {
                     className="text-[#16213E]/60 mb-1"
                     style={{ fontSize: '0.8125rem', fontWeight: 500 }}
                   >
-                    Blockchain Transaction Hash
+                    Video Hash (SHA-256)
                   </div>
                   <div
                     className="text-[#16213E] break-all font-mono"
                     style={{ fontSize: '0.8125rem', fontWeight: 600 }}
                   >
-                    {certificateData.blockchainHash}
+                    {certificate.blockchainHash}
                   </div>
                 </div>
                 <button
                   onClick={() =>
-                    copyToClipboard(certificateData.blockchainHash)
+                    copyToClipboard(certificate.blockchainHash, 'hash')
                   }
                   className="p-2 hover:bg-white/70 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <Copy className="w-4 h-4 text-[#16213E]" />
+                  {copied === 'hash' ? (
+                    <Check className="w-4 h-4 text-[#A7E6FF]" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-[#16213E]" />
+                  )}
                 </button>
               </div>
             </div>
@@ -179,7 +282,7 @@ export function CertificatePage() {
         >
           <Button
             variant="outline"
-            className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 px-6 w-full sm:w-auto"
+            className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 px-6 w-full sm:w-auto bg-transparent"
             style={{ fontSize: '0.9375rem', fontWeight: 600 }}
           >
             <Download className="w-4 h-4 mr-2" />
@@ -187,7 +290,7 @@ export function CertificatePage() {
           </Button>
           <Button
             variant="outline"
-            className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 px-6 w-full sm:w-auto"
+            className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 px-6 w-full sm:w-auto bg-transparent"
             style={{ fontSize: '0.9375rem', fontWeight: 600 }}
           >
             <Share2 className="w-4 h-4 mr-2" />

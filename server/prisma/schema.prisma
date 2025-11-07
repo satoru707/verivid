@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  wallet       String   @unique @db.VarChar(255)
+  username     String?  @unique
+  email        String?  @unique
+  bio          String?
+  avatarUrl    String?
+  recoveryToken String?  @unique
+  recoveryTokenExpiry DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  videos        Video[]
+  verifications Verification[]
+
+  @@index([wallet])
+}
+
+model Video {
+  id            String   @id @default(cuid())
+  uploaderId    String
+  uploader      User     @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  
+  originalName  String
+  ipfsCid       String?
+  storageUrl    String
+  sha256        String   @unique @db.VarChar(64)
+  
+  durationSec   Int?
+  width         Int?
+  height        Int?
+  
+  verified      Boolean  @default(false)
+  verifiedAt    DateTime?
+  verifiedBy    String?  @db.VarChar(255)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  verifications Verification[]
+
+  @@index([uploaderId])
+  @@index([sha256])
+  @@index([verified])
+}
+
+model Verification {
+  id           String   @id @default(cuid())
+  videoId      String
+  video        Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [signer], references: [wallet], onDelete: Cascade)
+  
+  txHash       String?  @unique
+  chain        String   @default("ethereum:1")
+  blockNumber  BigInt?
+  proofHash    String   @db.VarChar(66)
+  
+  signer       String   @db.VarChar(255)
+  metadataUri  String?
+  
+  createdAt    DateTime @default(now())
+
+  @@index([videoId])
+  @@index([signer])
+  @@index([proofHash])
+}
+
+model Nonce {
+  id        String   @id @default(cuid())
+  wallet    String   @unique @db.VarChar(255)
+  nonce     String   @db.VarChar(255)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([wallet])
+}

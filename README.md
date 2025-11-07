@@ -1,215 +1,187 @@
-# Web3 Wallet Authentication Integration
+# VeriVid - Video Proof & Authenticity Platform
 
-## Overview
+A decentralized video verification platform built on blockchain. VeriVid allows users to upload videos, prove ownership via on-chain verification, and create immutable proof-of-authenticity records.
 
-VeriVid now includes a complete Web3 wallet authentication system that integrates seamlessly into the existing interface without requiring separate authentication or profile pages.
+## Architecture
+
+### Tech Stack
+
+**Frontend:**
+- React 19 + Vite
+- TypeScript
+- Tailwind CSS
+- TanStack Router
+- ethers.js / wagmi (Web3)
+
+**Backend:**
+- Node.js + Express
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- JWT Authentication
+
+**Blockchain:**
+- Solidity Smart Contracts
+- Ethereum (mainnet or testnet)
+- ethers.js for contract interaction
+
+**Storage:**
+- IPFS (Pinata/NFT.storage)
+- AWS S3 (optional)
 
 ## Features
 
-### 1. **Wallet Connection**
+### Core Features
 
-- **Connect Wallet Button**: Located in the navbar, users can click to open the wallet selection modal
-- **Supported Wallets**:
-  - MetaMask 🦊
-  - WalletConnect 🔗
-  - Coinbase Wallet 💼
-- **Auto-Registration**: User accounts are created automatically on first wallet connection
-- **Session Persistence**: Wallet connection persists across browser sessions using localStorage
+1. **Wallet Authentication**
+   - Sign-in with Web3 wallet (MetaMask, etc.)
+   - Non-custodial authentication via wallet signature
+   - HTTP-only JWT cookies for session management
 
-### 2. **User Interface States**
+2. **Video Upload**
+   - Direct-to-storage uploads (S3/IPFS)
+   - SHA-256 hash verification
+   - Duplicate detection
+   - Metadata extraction
 
-#### Disconnected State
+3. **On-Chain Verification**
+   - Register video proof on blockchain
+   - Immutable proof-of-ownership records
+   - Transaction receipt verification
+   - Multi-chain support ready
 
-- Navbar shows: "Connect Wallet" button with gradient styling
-- Button opens WalletConnectModal when clicked
+4. **User Profiles**
+   - Editable profile information
+   - Video library management
+   - Verification history
 
-#### Connected State
+5. **Moderation & Quality**
+   - Duplicate detection
+   - Flagging system
+   - Background job processing
 
-- Navbar shows: Truncated wallet address (e.g., `0x742d...f44e`) in a glassmorphic button
-- Connected indicator: Green pulsing dot next to address
-- Clicking address opens ProfileSettingsDropdown
+## Project Structure
 
-### 3. **Profile Management**
+\`\`\`
+verivid/
+├── client/                 # React frontend (Vite)
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── pages/          # Page components
+│   │   ├── routes/         # Route definitions
+│   │   ├── context/        # React context (wallet, auth)
+│   │   └── services/       # API services
+│   └── vite.config.ts
+│
+├── server/                 # Express backend
+│   ├── src/
+│   │   ├── routes/         # API routes
+│   │   ├── services/       # Business logic
+│   │   ├── workers/        # Background jobs
+│   │   ├── middleware/     # Express middleware
+│   │   ├── utils/          # Utilities
+│   │   └── main.ts         # Entry point
+│   ├── prisma/
+│   │   └── schema.prisma   # Database schema
+│   └── package.json
+│
+└── README.md
+\`\`\`
 
-Users can customize their profile through the dropdown menu:
+## Getting Started
 
-- **Username**: Display name for the platform
-- **Email**: Used for recovery and notifications (optional)
-- **Bio**: Personal description (optional)
+### Quick Start
 
-All profile data is stored locally and persists across sessions.
+#### 1. Backend Setup
 
-### 4. **Email Recovery Flow**
+\`\`\`bash
+cd server
+pnpm install
+cp .env.local .env  # Configure environment variables
+pnpm run prisma:migrate
+pnpm run dev
+\`\`\`
 
-Accessible from the profile dropdown:
+#### 2. Frontend Setup
 
-1. User clicks "Recovery Options"
-2. EmailRecoveryModal appears
-3. User enters their registered email
-4. System simulates sending recovery link
-5. Success confirmation with "Return Home" option
+\`\`\`bash
+cd client
+pnpm install
+pnpm run dev
+\`\`\`
 
-## Technical Implementation
+Visit `http://localhost:5173` to see the app.
 
-### Context Provider
+### Full Setup Guide
 
-```tsx
-// contexts/WalletContext.tsx
-- Manages wallet connection state
-- Handles user profile data
-- Provides authentication methods
-- Persists data to localStorage
-```
+See [server/SETUP.md](./server/SETUP.md) for detailed backend setup and deployment instructions.
 
-### Components
+## API Endpoints
 
-#### WalletConnectModal
+### Authentication
+\`\`\`
+POST   /auth/nonce              Get signing nonce
+POST   /auth/verify             Verify signature & get JWT
+POST   /auth/logout             Clear session
+POST   /auth/recover/request    Request account recovery
+\`\`\`
 
-- 3-step process: Select → Signing → Success
-- Animated transitions between states
-- Simulates wallet signature request
+### Videos
+\`\`\`
+GET    /api/videos              List user's videos
+GET    /api/videos/:id          Get video details
+POST   /api/videos/upload-init  Initialize upload
+POST   /api/videos/:id/upload-complete  Complete upload
+DELETE /api/videos/:id          Delete video
+\`\`\`
 
-#### ProfileSettingsDropdown
+### Verification
+\`\`\`
+POST   /api/verify/prepare-tx   Prepare verification transaction
+POST   /api/verify/confirm-tx   Confirm verification
+GET    /api/verify/:proofHash   Get verification details
+GET    /api/videos/:id/verifications  Get video verifications
+\`\`\`
 
-- Inline profile editing
-- Copy wallet address functionality
-- Access to recovery options
-- Disconnect wallet option
+### User Profile
+\`\`\`
+GET    /api/user/me             Get current user
+POST   /api/user                Update profile
+GET    /api/user/:wallet        Get public profile
+\`\`\`
 
-#### EmailRecoveryModal
+## Environment Variables
 
-- Email input with validation
-- Animated send process
-- Success confirmation
+### Backend (.env)
 
-### Integration Points
+\`\`\`
+DATABASE_URL=postgresql://...
+JWT_SECRET=your-secret-key
+NODE_ENV=development
+PORT=3001
 
-1. **App.tsx**: Wrapped in `WalletProvider`
-2. **Navbar.tsx**: Displays wallet status and connection controls
-3. **UploadPage.tsx**: Uses wallet address for video ownership
-4. **CertificatePage.tsx**: Shows connected wallet as certificate owner
+CONTRACT_ADDRESS=0x...
+CONTRACT_CHAIN_ID=1
+RPC_URL=https://...
 
-## User Flow
+IPFS_GATEWAY=https://ipfs.io
+IPFS_API_KEY=...
 
-### First-Time User
+FRONTEND_URL=http://localhost:5173
+\`\`\`
 
-1. Lands on VeriVid homepage
-2. Clicks "Connect Wallet" in navbar
-3. Selects preferred wallet from modal
-4. Signs message in wallet
-5. Automatically registered with wallet address
-6. Can optionally add username/email/bio
+See [server/.env.local](./server/.env.local) for full list.
 
-### Returning User
+## Smart Contract
 
-1. Wallet connection automatically restored
-2. Navbar shows connected wallet address
-3. Can access profile settings via dropdown
-4. Can disconnect or manage recovery options
+The `VideoProofRegistry` contract provides on-chain proof storage:
 
-### Video Verification Flow
+```solidity
+// Register a video proof
+function registerProof(bytes32 proofHash, string metadataUri)
 
-1. User must be connected to verify videos
-2. Wallet address is recorded as video owner
-3. Certificate displays connected wallet as owner
-4. Blockchain transactions tied to wallet address
+// Check if proof exists
+function isRegistered(bytes32 proofHash) returns (bool)
 
-## Data Storage
-
-### localStorage Keys
-
-- `verivid_wallet`: Stores connected wallet address
-- `verivid_profile`: Stores user profile data (JSON)
-
-### Profile Structure
-
-```json
-{
-  "username": "User1234",
-  "email": "user@example.com",
-  "bio": "Content creator and blockchain enthusiast"
-}
-```
-
-## Security Notes
-
-- No private keys are stored
-- All blockchain operations are simulated (mock implementation)
-- Real implementation should use Web3 libraries (ethers.js, wagmi, etc.)
-- JWT sessions should be implemented server-side
-- Email recovery should use secure token generation
-
-## Design Philosophy
-
-- **In-Context**: All wallet interactions happen via modals/dropdowns
-- **Non-Intrusive**: No separate auth or profile pages required
-- **Visual Clarity**: Clear state changes between connected/disconnected
-- **Brand Consistency**: Maintains VeriVid's glassmorphic aesthetic
-- **Smooth Animations**: Loading states and transitions feel premium
-
-## Future Enhancements
-
-- Real Web3 wallet integration (MetaMask, WalletConnect SDK)
-- ENS name resolution for addresses
-- Multi-chain support (Ethereum, Polygon, etc.)
-- NFT-based certificates
-- Social login options (Google, Twitter) with wallet linking
-- Transaction history and gas estimation
-- Hardware wallet support (Ledger, Trezor)
-
-## Code Examples
-
-### Using Wallet Context
-
-```tsx
-import { useWallet } from "./contexts/WalletContext";
-
-function MyComponent() {
-  const { isConnected, walletAddress, connectWallet, disconnectWallet } =
-    useWallet();
-
-  return (
-    <div>
-      {isConnected ? (
-        <p>Connected: {walletAddress}</p>
-      ) : (
-        <button onClick={() => connectWallet("0x...")}>Connect</button>
-      )}
-    </div>
-  );
-}
-```
-
-### Checking Connection Status
-
-```tsx
-const { isConnected } = useWallet();
-
-if (!isConnected) {
-  return <ConnectWalletPrompt />;
-}
-```
-
-### Updating Profile
-
-```tsx
-const { updateProfile } = useWallet();
-
-updateProfile({
-  username: "NewUsername",
-  email: "newemail@example.com",
-});
-```
-
-## Testing
-
-To test the wallet integration:
-
-1. Click "Connect Wallet" in navbar
-2. Select any wallet option
-3. Wait for signing animation (2 seconds)
-4. Observe success state and navbar update
-5. Click wallet address to open dropdown
-6. Try profile settings and recovery options
-7. Refresh page to verify persistence
-8. Disconnect and reconnect to test full flow
+// Get proof details
+function getProof(bytes32 proofHash) returns (Proof)

@@ -15,7 +15,6 @@ export function DocsPage() {
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-6xl mx-auto">
-        {/* Hero */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -48,7 +47,6 @@ export function DocsPage() {
           </p>
         </motion.div>
 
-        {/* Main Content with Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -79,7 +77,6 @@ export function DocsPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* How It Works */}
             <TabsContent value="how" className="space-y-6">
               {[
                 {
@@ -183,7 +180,6 @@ export function DocsPage() {
               ))}
             </TabsContent>
 
-            {/* Technology */}
             <TabsContent value="tech" className="space-y-6">
               <div className="glass-card rounded-2xl p-8 mb-6">
                 <h2
@@ -301,7 +297,6 @@ export function DocsPage() {
               </div>
             </TabsContent>
 
-            {/* FAQ */}
             <TabsContent value="faq" className="space-y-4">
               {[
                 {

@@ -45,19 +45,17 @@ export function SnowflakeBackground() {
       ctx.translate(x, y);
       ctx.globalAlpha = opacity;
       
-      // Draw snowflake shape
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         ctx.moveTo(0, 0);
         ctx.lineTo(0, -size);
         ctx.rotate(Math.PI / 3);
       }
-      
+
       ctx.strokeStyle = '#A7E6FF';
       ctx.lineWidth = 1;
       ctx.stroke();
       
-      // Add sparkle effect
       ctx.beginPath();
       ctx.arc(0, 0, size / 3, 0, Math.PI * 2);
       ctx.fillStyle = '#A7E6FF';

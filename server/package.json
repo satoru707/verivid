@@ -1,24 +1,41 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "VeriVid backend server",
+  "main": "dist/main.js",
   "type": "module",
   "scripts": {
-    "dev": "ts-node main.ts",
-    "start": "nodemon --watch src --exec 'ts-node main.ts'"
+    "dev": "ts-node src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc",
+    "prisma": "prisma generate && prisma db push",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^24.10.0",
     "prettier": "^3.6.2",
+    "prisma": "^5.20.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@types/express": "^5.0.5",
-    "express": "^5.1.0"
+    "@prisma/client": "^5.20.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.5",
+    "express": "^5.1.0",
+    "express-fileupload": "^1.5.2",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.23.8"
   }
 }
