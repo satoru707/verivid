@@ -1,7 +1,7 @@
 import Express, { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifyAuth, type AuthRequest } from '../middleware/auth';
-import { userUpdateSchema } from '../utils/validation';
+import { verifyAuth, type AuthRequest } from '../middleware/auth.js';
+import { userUpdateSchema } from '../utils/validation.js';
 
 const router: Express.Router = Router();
 const prisma = new PrismaClient();

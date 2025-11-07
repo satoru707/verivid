@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { IPFSService } from '../services/ipfs.service';
+import { IPFSService } from '../services/ipfs.service.js';
 
 const prisma = new PrismaClient();
 const ipfsService = new IPFSService();

@@ -1,8 +1,8 @@
 import Express, { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifyAuth, type AuthRequest } from '../middleware/auth';
-import { UploadService } from '../services/upload.service';
-import { IPFSService } from '../services/ipfs.service';
+import { verifyAuth, type AuthRequest } from '../middleware/auth.js';
+import { UploadService } from '../services/upload.service.js';
+import { IPFSService } from '../services/ipfs.service.js';
 import * as crypto from 'crypto';
 
 const router: Express.Router = Router();
