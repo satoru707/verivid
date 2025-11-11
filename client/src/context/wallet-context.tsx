@@ -1,9 +1,5 @@
 import type React from 'react';
 
-/**
- * Wallet Context Provider - Manages authentication state and user profile
- * Uses context only for state management, no localStorage
- */
 import { useState, useEffect, useCallback } from 'react';
 import { WalletContext } from './use-wallet';
 import { walletService } from '../services/wallet.service';
@@ -30,15 +26,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       try {
         setIsLoading(true);
 
-        // Check if JWT cookie exists by attempting to fetch current user
         const response = await apiService.getCurrentUser();
-        if (response.user) {
-          setWalletAddress(response.user.wallet || null);
-          setUserProfile(response.user);
+        if (response.data) {
+          setWalletAddress(response.data.wallet || null);
+          setUserProfile(response.data);
           setIsConnected(true);
         }
-      } catch (err) {
-        // JWT invalid or expired, user is not connected
+      } catch (err: unknown) {
+        console.log(err);
         setIsConnected(false);
       } finally {
         setIsLoading(false);
@@ -52,26 +47,38 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
+      console.log('Starting wallet connection process...');
+// 1. Connect wallet → raw address
+const address = await walletService.connect();
+console.log('Address from walletService.connect():', address);
+if (!address) throw new Error('No address returned');
 
-      const address = await walletService.connect();
-      setWalletAddress(address);
-      setIsConnected(true);
+setWalletAddress(address);
+setIsConnected(true);
 
-      try {
-        const response = await apiService.getCurrentUser();
-        if (response.user) {
-          setUserProfile(response.user);
-        }
-      } catch (err) {
-        // Profile fetch failed but auth succeeded, set basic profile
-        setUserProfile({ wallet: address });
-      }
+// 2. Get nonce
+console.log('Requesting nonce for address:', address);
+const nonceRes = await apiService.getNonce(address);
+const nonce = nonceRes.data.nonce;
+console.log('Received nonce:', nonce);
+// 3. Sign the message
+const message = `VeriVid Authentication\n\nNonce: ${nonce}`;
+console.log('Signing message:', message);
+const signature = await walletService.signMessage(message);
+console.log('Generated signature:', signature);
+// 4. Login with "address:signature"
+const loginRes = await apiService.login(`${address}:${signature}`);
+console.log('Login response:', loginRes);
+if (loginRes.error) throw new Error(loginRes.error);
 
+      // 5. Load full profile
+      const userRes = await apiService.getCurrentUser();
+      setUserProfile(userRes.data);
+      console.log('User profile loaded:', userRes.data);
       return address;
-    } catch (err: any) {
-      const errorMsg =
-        err instanceof Error ? err.message : 'Failed to connect wallet';
-      setError(errorMsg);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to connect';
+      setError(msg);
       console.error('[Auth] Connect error:', err);
       return null;
     } finally {
@@ -99,10 +106,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setError(null);
 
       const response = await apiService.updateUserProfile(data);
-      if (response.user) {
-        setUserProfile(response.user);
+      if (response.data) {
+        setUserProfile(response.data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : 'Failed to update profile';
       setError(errorMsg);

@@ -15,6 +15,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
 import { apiService } from '../../services/api.service';
 
+export interface Verified {
+  title: string;
+  owner: string;
+  date: string;
+  time: string;
+  thumbnail: string;
+  hash: string;
+}
+
 export function CheckAuthenticityPage() {
   const [searchType, setSearchType] = useState<'file' | 'link'>('link');
   const [searchValue, setSearchValue] = useState('');
@@ -22,28 +31,86 @@ export function CheckAuthenticityPage() {
   const [searchResult, setSearchResult] = useState<
     'verified' | 'not-found' | null
   >(null);
+  const [verifiedData, setVerifiedData] = useState<Verified | null>(null);
   const navigate = useNavigate();
 
   const handleSearch = async () => {
     setIsScanning(true);
     setSearchResult(null);
+    setVerifiedData(null);
 
     try {
       if (searchType === 'link') {
-        const videoResponse = (await apiService.getVideoDetails(
-          searchValue
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        )) as any;
-        if (videoResponse.video && videoResponse.video.verified) {
+        const videoResponse = await apiService.getVideoDetails(searchValue);
+        if (videoResponse.data && videoResponse.data.verified) {
+          setVerifiedData({
+            title: videoResponse.data.originalName,
+            owner: videoResponse.data.uploaderId,
+            date: new Date(videoResponse.data.createdAt).toLocaleDateString(
+              'en-US',
+              {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }
+            ),
+            time: new Date(videoResponse.data.createdAt).toLocaleTimeString(
+              'en-US'
+            ),
+            thumbnail: videoResponse.data.storageUrl || '/placeholder.svg',
+            hash: videoResponse.data.sha256,
+          });
           setSearchResult('verified');
         } else {
           setSearchResult('not-found');
         }
       } else {
-        // File upload handling
-        // Compute hash and search
-        // TODO: Implement file hashing and verification lookup
-        setSearchResult(Math.random() > 0.5 ? 'verified' : 'not-found');
+        if (!searchValue) {
+          alert('Please select a file');
+          setIsScanning(false);
+          return;
+        }
+
+        const files = (
+          document.querySelector('input[type="file"]') as HTMLInputElement
+        )?.files;
+        if (!files || files.length === 0) {
+          alert('No file selected');
+          setIsScanning(false);
+          return;
+        }
+
+        const file = files[0];
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const fileHash = hashArray
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+
+        const verifyResponse = await apiService.verifyFileHash(fileHash);
+        if (verifyResponse.data.verified && verifyResponse.data.video) {
+          setVerifiedData({
+            title: verifyResponse.data.video.originalName,
+            owner: verifyResponse.data.video.uploaderId,
+            date: new Date(
+              verifyResponse.data.video.createdAt
+            ).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            time: new Date(
+              verifyResponse.data.video.createdAt
+            ).toLocaleTimeString('en-US'),
+            thumbnail:
+              verifyResponse.data.video.storageUrl || '/placeholder.svg',
+            hash: fileHash,
+          });
+          setSearchResult('verified');
+        } else {
+          setSearchResult('not-found');
+        }
       }
     } catch (err) {
       console.error('[CheckAuth] Search failed:', err);
@@ -53,19 +120,10 @@ export function CheckAuthenticityPage() {
     }
   };
 
-  const mockVerifiedData = {
-    title: 'Summer Vacation Vlog 2024',
-    owner: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    date: 'October 15, 2024',
-    time: '3:45 PM UTC',
-    thumbnail:
-      'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
-    hash: '0xf4d7b5c3a2e1f8d9c6b3a7e2f1d8c5b2a9e6d3f0',
-  };
-
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-4xl mx-auto">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -98,6 +156,7 @@ export function CheckAuthenticityPage() {
           </p>
         </motion.div>
 
+        {/* Main Search Interface */}
         <AnimatePresence mode="wait">
           {!isScanning && !searchResult && (
             <motion.div
@@ -106,6 +165,7 @@ export function CheckAuthenticityPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98 }}
             >
+              {/* Search Type Selector */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <button
                   onClick={() => setSearchType('link')}
@@ -172,6 +232,7 @@ export function CheckAuthenticityPage() {
                 </button>
               </div>
 
+              {/* Input Area */}
               <motion.div layout className="glass-card rounded-2xl p-8 mb-6">
                 {searchType === 'link' ? (
                   <div>
@@ -194,6 +255,11 @@ export function CheckAuthenticityPage() {
                     <input
                       type="file"
                       accept="video/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setSearchValue(e.target.files[0].name);
+                        }
+                      }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                     <FileVideo
@@ -228,6 +294,7 @@ export function CheckAuthenticityPage() {
             </motion.div>
           )}
 
+          {/* Scanning State */}
           {isScanning && (
             <motion.div
               key="scanning"
@@ -237,6 +304,7 @@ export function CheckAuthenticityPage() {
               className="max-w-md mx-auto"
             >
               <div className="glass-card rounded-2xl p-12 text-center">
+                {/* Animated Icon */}
                 <div className="relative inline-flex items-center justify-center mb-6">
                   <motion.div
                     animate={{ rotate: 360 }}
@@ -296,6 +364,7 @@ export function CheckAuthenticityPage() {
             </motion.div>
           )}
 
+          {/* Verified Result */}
           {searchResult === 'verified' && (
             <motion.div
               key="verified"
@@ -335,64 +404,66 @@ export function CheckAuthenticityPage() {
                   </div>
                 </div>
 
-                <div className="glass rounded-2xl overflow-hidden mb-6">
-                  <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] relative">
-                    <img
-                      src={mockVerifiedData.thumbnail || '/placeholder.svg'}
-                      alt={mockVerifiedData.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h4
-                      className="text-[#16213E] mb-4"
-                      style={{ fontSize: '1.125rem', fontWeight: 700 }}
-                    >
-                      {mockVerifiedData.title}
-                    </h4>
+                {verifiedData && (
+                  <div className="glass rounded-2xl overflow-hidden mb-6">
+                    <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] relative">
+                      <img
+                        src={verifiedData.thumbnail || '/placeholder.svg'}
+                        alt={verifiedData.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-6">
+                      <h4
+                        className="text-[#16213E] mb-4"
+                        style={{ fontSize: '1.125rem', fontWeight: 700 }}
+                      >
+                        {verifiedData.title}
+                      </h4>
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-4 bg-white/60 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#A7E6FF]/30 to-[#C6A0F6]/30 flex items-center justify-center flex-shrink-0">
-                          <User className="w-5 h-5 text-[#16213E]" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div
-                            className="text-[#16213E]/60 mb-1"
-                            style={{ fontSize: '0.8125rem', fontWeight: 500 }}
-                          >
-                            Owner
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 p-4 bg-white/60 rounded-xl">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#A7E6FF]/30 to-[#C6A0F6]/30 flex items-center justify-center flex-shrink-0">
+                            <User className="w-5 h-5 text-[#16213E]" />
                           </div>
-                          <div
-                            className="text-[#16213E] font-mono truncate"
-                            style={{ fontSize: '0.875rem', fontWeight: 600 }}
-                          >
-                            {mockVerifiedData.owner}
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className="text-[#16213E]/60 mb-1"
+                              style={{ fontSize: '0.8125rem', fontWeight: 500 }}
+                            >
+                              Owner
+                            </div>
+                            <div
+                              className="text-[#16213E] font-mono truncate"
+                              style={{ fontSize: '0.875rem', fontWeight: 600 }}
+                            >
+                              {verifiedData.owner}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-4 bg-white/60 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#A7E6FF]/30 to-[#C6A0F6]/30 flex items-center justify-center flex-shrink-0">
-                          <Calendar className="w-5 h-5 text-[#16213E]" />
-                        </div>
-                        <div>
-                          <div
-                            className="text-[#16213E]/60 mb-1"
-                            style={{ fontSize: '0.8125rem', fontWeight: 500 }}
-                          >
-                            Verified on
+                        <div className="flex items-center gap-3 p-4 bg-white/60 rounded-xl">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#A7E6FF]/30 to-[#C6A0F6]/30 flex items-center justify-center flex-shrink-0">
+                            <Calendar className="w-5 h-5 text-[#16213E]" />
                           </div>
-                          <div
-                            className="text-[#16213E]"
-                            style={{ fontSize: '0.875rem', fontWeight: 600 }}
-                          >
-                            {mockVerifiedData.date}
+                          <div>
+                            <div
+                              className="text-[#16213E]/60 mb-1"
+                              style={{ fontSize: '0.8125rem', fontWeight: 500 }}
+                            >
+                              Verified on
+                            </div>
+                            <div
+                              className="text-[#16213E]"
+                              style={{ fontSize: '0.875rem', fontWeight: 600 }}
+                            >
+                              {verifiedData.date}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex gap-3">
                   <Button
@@ -406,6 +477,7 @@ export function CheckAuthenticityPage() {
                     onClick={() => {
                       setSearchResult(null);
                       setSearchValue('');
+                      setVerifiedData(null);
                     }}
                     variant="outline"
                     className="flex-1 glass text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12"
@@ -418,6 +490,7 @@ export function CheckAuthenticityPage() {
             </motion.div>
           )}
 
+          {/* Not Verified Result */}
           {searchResult === 'not-found' && (
             <motion.div
               key="not-found"
@@ -461,6 +534,7 @@ export function CheckAuthenticityPage() {
                     onClick={() => {
                       setSearchResult(null);
                       setSearchValue('');
+                      setVerifiedData(null);
                     }}
                     variant="outline"
                     className="flex-1 glass text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12"

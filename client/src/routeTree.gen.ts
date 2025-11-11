@@ -13,10 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as UploadIndexRouteImport } from './routes/upload/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
-import { Route as ConflictIndexRouteImport } from './routes/conflict/index'
 import { Route as CheckAuthIndexRouteImport } from './routes/check-auth/index'
-import { Route as CertificateIndexRouteImport } from './routes/certificate/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
+import { Route as CertificateIdRouteImport } from './routes/certificate/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -38,19 +37,9 @@ const DocsIndexRoute = DocsIndexRouteImport.update({
   path: '/docs/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConflictIndexRoute = ConflictIndexRouteImport.update({
-  id: '/conflict/',
-  path: '/conflict/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CheckAuthIndexRoute = CheckAuthIndexRouteImport.update({
   id: '/check-auth/',
   path: '/check-auth/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CertificateIndexRoute = CertificateIndexRouteImport.update({
-  id: '/certificate/',
-  path: '/certificate/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthIndexRoute = AuthIndexRouteImport.update({
@@ -58,23 +47,26 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/auth/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CertificateIdRoute = CertificateIdRouteImport.update({
+  id: '/certificate/$id',
+  path: '/certificate/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/certificate/$id': typeof CertificateIdRoute
   '/auth': typeof AuthIndexRoute
-  '/certificate': typeof CertificateIndexRoute
   '/check-auth': typeof CheckAuthIndexRoute
-  '/conflict': typeof ConflictIndexRoute
   '/docs': typeof DocsIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/upload': typeof UploadIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/certificate/$id': typeof CertificateIdRoute
   '/auth': typeof AuthIndexRoute
-  '/certificate': typeof CertificateIndexRoute
   '/check-auth': typeof CheckAuthIndexRoute
-  '/conflict': typeof ConflictIndexRoute
   '/docs': typeof DocsIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/upload': typeof UploadIndexRoute
@@ -82,10 +74,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/certificate/$id': typeof CertificateIdRoute
   '/auth/': typeof AuthIndexRoute
-  '/certificate/': typeof CertificateIndexRoute
   '/check-auth/': typeof CheckAuthIndexRoute
-  '/conflict/': typeof ConflictIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/upload/': typeof UploadIndexRoute
@@ -94,30 +85,27 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/certificate/$id'
     | '/auth'
-    | '/certificate'
     | '/check-auth'
-    | '/conflict'
     | '/docs'
     | '/profile'
     | '/upload'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/certificate/$id'
     | '/auth'
-    | '/certificate'
     | '/check-auth'
-    | '/conflict'
     | '/docs'
     | '/profile'
     | '/upload'
   id:
     | '__root__'
     | '/'
+    | '/certificate/$id'
     | '/auth/'
-    | '/certificate/'
     | '/check-auth/'
-    | '/conflict/'
     | '/docs/'
     | '/profile/'
     | '/upload/'
@@ -125,10 +113,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CertificateIdRoute: typeof CertificateIdRoute
   AuthIndexRoute: typeof AuthIndexRoute
-  CertificateIndexRoute: typeof CertificateIndexRoute
   CheckAuthIndexRoute: typeof CheckAuthIndexRoute
-  ConflictIndexRoute: typeof ConflictIndexRoute
   DocsIndexRoute: typeof DocsIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
   UploadIndexRoute: typeof UploadIndexRoute
@@ -164,25 +151,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/conflict/': {
-      id: '/conflict/'
-      path: '/conflict'
-      fullPath: '/conflict'
-      preLoaderRoute: typeof ConflictIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/check-auth/': {
       id: '/check-auth/'
       path: '/check-auth'
       fullPath: '/check-auth'
       preLoaderRoute: typeof CheckAuthIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/certificate/': {
-      id: '/certificate/'
-      path: '/certificate'
-      fullPath: '/certificate'
-      preLoaderRoute: typeof CertificateIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/': {
@@ -192,15 +165,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/certificate/$id': {
+      id: '/certificate/$id'
+      path: '/certificate/$id'
+      fullPath: '/certificate/$id'
+      preLoaderRoute: typeof CertificateIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CertificateIdRoute: CertificateIdRoute,
   AuthIndexRoute: AuthIndexRoute,
-  CertificateIndexRoute: CertificateIndexRoute,
   CheckAuthIndexRoute: CheckAuthIndexRoute,
-  ConflictIndexRoute: ConflictIndexRoute,
   DocsIndexRoute: DocsIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,
   UploadIndexRoute: UploadIndexRoute,

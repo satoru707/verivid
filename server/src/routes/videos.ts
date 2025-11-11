@@ -4,6 +4,7 @@ import { verifyAuth, type AuthRequest } from '../middleware/auth.js';
 import { UploadService } from '../services/upload.service.js';
 import { IPFSService } from '../services/ipfs.service.js';
 import * as crypto from 'crypto';
+import { fi } from 'zod/locales';
 
 const router: Express.Router = Router();
 const prisma = new PrismaClient();
@@ -212,6 +213,60 @@ router.get('/:id/verifications', async (req, res) => {
       error: 'Failed to fetch verifications',
       data: null,
     });
+  }
+});
+
+router.post('/verify-hash', async (req, res) => {
+  try {
+    const { sha256 } = req.body;
+
+    if (!sha256 || typeof sha256 !== 'string') {
+      return res
+        .status(400)
+        .json({ error: 'Valid SHA256 hash required', data: null });
+    }
+
+    const video = await prisma.video.findUnique({
+      where: { sha256 },
+      include: {
+        verifications: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!video) {
+      return res.json({
+        error: null,
+        data: {
+          verified: false,
+          video: null,
+          verifications: [],
+        },
+      });
+    }
+
+    return res.json({
+      error: null,
+      data: {
+        verified: video.verified,
+        video: {
+          id: video.id,
+          originalName: video.originalName,
+          storageUrl: video.storageUrl,
+          sha256: video.sha256,
+          verified: video.verified,
+          verifiedAt: video.verifiedAt,
+          verifiedBy: video.verifiedBy,
+          uploaderId: video.uploaderId,
+          createdAt: video.createdAt,
+        },
+        verifications: video.verifications,
+      },
+    });
+  } catch (error) {
+    console.error('Verify hash error:', error);
+    return res.status(500).json({ error: 'Failed to verify hash', data: null });
   }
 });
 

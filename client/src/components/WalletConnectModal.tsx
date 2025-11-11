@@ -44,15 +44,17 @@ export function WalletConnectModal({
   const handleConnectMetaMask = () => {
     setStep('signing');
     (async () => {
+      console.log('1');
       try {
         const address = await connectWallet();
+        console.log('2', address);
         if (address) {
           setStep('success');
           setTimeout(() => onClose(), 1500);
         } else {
           setStep('select');
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('[WalletModal] Connect failed:', e);
         setStep('select');
       }

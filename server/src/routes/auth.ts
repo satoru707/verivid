@@ -2,6 +2,9 @@ import express, { Router } from 'express';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { createToken } from '../utils/jwt.js';
+import { generateRandomNonce } from '../utils/crypto.js';
+import { ethers } from 'ethers';
 
 const router: express.Router = Router();
 const prisma = new PrismaClient();
@@ -26,6 +29,102 @@ const rateLimitMiddleware = async (
     });
   }
 };
+
+router.post('/nonce', async (req, res) => {
+  const { wallet } = req.body;
+  if (!wallet || typeof wallet !== 'string') {
+    return res.status(400).json({ error: 'wallet is required', data: null });
+  }
+
+  const lower = wallet.toLowerCase();
+
+  try {
+    let user = await prisma.user.findUnique({ where: { wallet: lower } });
+    if (!user) {
+      user = await prisma.user.create({ data: { wallet: lower } });
+    }
+
+    const nonce = generateRandomNonce(16);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { nonce },
+    });
+
+    return res.json({ error: null, data: { nonce } });
+  } catch (err) {
+    console.error('[Auth] nonce error:', err);
+    return res.status(500).json({ error: 'Server error', data: null });
+  }
+});
+
+router.post('/login', async (req, res) => {
+  const { wallet: payload } = req.body;
+  if (!payload || typeof payload !== 'string') {
+    return res
+      .status(400)
+      .json({ error: 'wallet payload required', data: null });
+  }
+
+  const [address, signature] = payload.split(':');
+  if (!address || !signature) {
+    return res
+      .status(400)
+      .json({ error: 'Invalid payload format', data: null });
+  }
+
+  const lower = address.toLowerCase();
+
+  try {
+    const user = await prisma.user.findUnique({ where: { wallet: lower } });
+    if (!user?.nonce) {
+      return res
+        .status(401)
+        .json({ error: 'No nonce for this address', data: null });
+    }
+
+    // === CHANGE: Use EIP-712 typed data ===
+    const domain = { name: 'VeriVid', version: '1' };
+    const types = {
+      Authentication: [
+        { name: 'message', type: 'string' },
+        { name: 'nonce', type: 'string' },
+      ],
+    };
+    const value = {
+      message: 'VeriVid Authentication',
+      nonce: user.nonce,
+    };
+
+    const recovered = ethers.verifyTypedData(domain, types, value, signature);
+
+    if (recovered.toLowerCase() !== lower) {
+      return res.status(401).json({ error: 'Invalid signature', data: null });
+    }
+
+    // === Regenerate nonce ===
+    const newNonce = Math.floor(100000 + Math.random() * 900000).toString();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { nonce: newNonce },
+    });
+
+    // === Issue JWT ===
+    const token = createToken({ userId: user.id, wallet: user.wallet });
+
+    res.cookie('verivid_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({ error: null, data: { token } });
+  } catch (err) {
+    console.error('[Auth] login error:', err);
+    return res.status(500).json({ error: 'Server error', data: null });
+  }
+});
 
 router.post('/recover/request', rateLimitMiddleware, async (req, res) => {
   try {

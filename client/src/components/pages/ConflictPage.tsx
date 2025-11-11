@@ -8,27 +8,46 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 
-export function ConflictPage() {
-  const originalVerification = {
-    title: 'Summer Vacation Vlog 2024',
-    owner: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    timestamp: 'October 15, 2024 at 3:45 PM UTC',
-    blockchainHash:
-      '0xf4d7b5c3a2e1f8d9c6b3a7e2f1d8c5b2a9e6d3f0c7b4a1e8d5c2b9f6a3e0d7c4',
-    thumbnail:
-      'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
+interface ConflictData {
+  originalVerification: {
+    title: string;
+    owner: string;
+    timestamp: string;
+    blockchainHash: string;
+    thumbnail: string;
   };
+  conflictingUpload: {
+    title: string;
+    owner: string;
+    timestamp: string;
+    blockchainHash: string;
+    thumbnail: string;
+  };
+}
 
-  const conflictingUpload = {
-    title: 'My Vacation Video',
-    owner: '0x8b3e2f1c9d7a5b4e3f2c1d9a8b7e6f5c4d3a2b1e0f9c8d7a6b5e4f3c2d1a0b9',
-    timestamp: 'October 28, 2024 at 1:20 PM UTC',
-    blockchainHash:
-      '0xa9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8',
-    thumbnail:
-      'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
-  };
+export function ConflictPage({ conflict }: { conflict: ConflictData }) {
+  const navigate = useNavigate();
+
+  if (!conflict) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#16213E] text-lg mb-4">
+            No conflict data provided
+          </p>
+          <Button
+            onClick={() => navigate({ to: '/profile' })}
+            className="bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12 px-8"
+          >
+            Back to Profile
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  const { originalVerification, conflictingUpload } = conflict as ConflictData;
 
   const DetailCard = ({
     data,
@@ -73,9 +92,10 @@ export function ConflictPage() {
         {isOriginal ? 'First Verification' : 'Later Upload'}
       </h3>
 
+      {/* Video Preview */}
       <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] rounded-xl mb-4 overflow-hidden">
         <img
-          src={data.thumbnail}
+          src={data.thumbnail || '/placeholder.svg'}
           alt={data.title}
           className="w-full h-full object-cover"
         />
@@ -155,6 +175,7 @@ export function ConflictPage() {
   return (
     <div className="min-h-screen pt-32 pb-20 px-6 sm:px-8">
       <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -188,6 +209,7 @@ export function ConflictPage() {
           </p>
         </motion.div>
 
+        {/* Two Column Layout */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -198,6 +220,7 @@ export function ConflictPage() {
           <DetailCard data={conflictingUpload} isOriginal={false} />
         </motion.div>
 
+        {/* Divider with explanation */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -216,6 +239,7 @@ export function ConflictPage() {
           </div>
         </motion.div>
 
+        {/* Explanation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -259,7 +283,7 @@ export function ConflictPage() {
             </Button>
             <Button
               variant="outline"
-              className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12"
+              className="glass-card text-[#16213E] border-[#A7E6FF]/40 hover:bg-white/60 h-12 bg-transparent"
               style={{ fontSize: '0.9375rem', fontWeight: 600 }}
             >
               Submit Appeal

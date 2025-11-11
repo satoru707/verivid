@@ -1,3 +1,4 @@
+// components/pages/CertificatePage.tsx
 import { useEffect, useState } from 'react';
 import {
   ExternalLink,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { apiService } from '../../services/api.service';
 
 interface CertificateData {
@@ -28,7 +29,8 @@ interface CertificateData {
 
 export function CertificatePage() {
   const navigate = useNavigate();
-  const params = useParams({ from: '/certificate/$certificateId' });
+  const { id: certificateId } = useParams({ from: '/certificate/$id' }); // Extract ID
+
   const [certificate, setCertificate] = useState<CertificateData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,16 +42,18 @@ export function CertificatePage() {
         setIsLoading(true);
         setError(null);
 
-        const certificateId = params?.certificateId;
         if (!certificateId) {
           setError('Invalid certificate ID');
           return;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const response = await apiService.getVideoDetails(certificateId) as any
-        if (response.video) {
-          const video = response.video;
+        const response = (await apiService.getVideoDetails(
+          certificateId
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        )) as any;
+
+        if (response.data?.video) {
+          const video = response.data.video;
           setCertificate({
             id: video.id,
             title: video.originalName,
@@ -66,9 +70,11 @@ export function CertificatePage() {
               timeZone: 'UTC',
             }),
             blockchainHash: video.sha256,
-            txHash: video.txHash,
-            metadataUri: video.metadataUri,
+            txHash: video.verifications?.[0]?.txHash,
+            metadataUri: video.verifications?.[0]?.metadataUri,
           });
+        } else {
+          setError('Certificate not found');
         }
       } catch (err) {
         console.error('[Certificate] Load error:', err);
@@ -79,7 +85,7 @@ export function CertificatePage() {
     };
 
     loadCertificate();
-  }, [params?.certificateId]);
+  }, [certificateId]);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -152,7 +158,7 @@ export function CertificatePage() {
 
             <div className="aspect-video bg-gradient-to-br from-[#C9D6DF] to-[#A7E6FF] rounded-2xl mb-6 overflow-hidden shadow-lg">
               <img
-                src={certificate.thumbnail || '/placeholder.svg'}
+                src={certificate.thumbnail}
                 alt={certificate.title}
                 className="w-full h-full object-cover"
               />
@@ -253,6 +259,14 @@ export function CertificatePage() {
             </div>
 
             <Button
+              onClick={() => {
+                if (certificate.txHash) {
+                  window.open(
+                    `https://explorer.example.com/tx/${certificate.txHash}`,
+                    '_blank'
+                  );
+                }
+              }}
               className="w-full bg-gradient-to-r from-[#A7E6FF] to-[#C6A0F6] text-[#16213E] hover:shadow-xl transition-all glow-ice border-0 h-12 mb-6"
               style={{ fontSize: '0.9375rem', fontWeight: 600 }}
             >
