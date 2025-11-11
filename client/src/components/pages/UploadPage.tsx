@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from 'react';
 import { useState } from 'react';
 import {
@@ -128,13 +129,12 @@ export function UploadPage() {
         uploadInit.videoId
       );
       const verifyPrep = prepareVerificationResponse.data;
-      if (!window.ethereum) {
+      if (!(window as any).ethereum) {
         throw new Error('MetaMask not found');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const provider = new (ethers as any).providers.Web3Provider(
-        window.ethereum
+        (window as any).ethereum
       );
       const walletSigner = provider.getSigner();
 

@@ -9,6 +9,7 @@ import {
 } from './ui/dropdown-menu';
 import { User, LogOut, Copy, Check } from 'lucide-react';
 import { useWallet } from '../context/use-wallet';
+import { apiService } from '../services/api.service';
 
 interface WalletDropdownProps {
   children: React.ReactNode;
@@ -35,6 +36,7 @@ export function WalletDropdown({
     setIsLoading(true);
     try {
       await disconnectWallet();
+      await apiService.logout();
     } catch (err) {
       console.error('[WalletDropdown] Disconnect error:', err);
     } finally {

@@ -1,5 +1,3 @@
-import type React from 'react';
-
 import { useState, useEffect, useCallback } from 'react';
 import { WalletContext } from './use-wallet';
 import { walletService } from '../services/wallet.service';
@@ -22,62 +20,40 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile>({});
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    const init = async () => {
       try {
         setIsLoading(true);
-
-        const response = await apiService.getCurrentUser();
-        if (response.data) {
-          setWalletAddress(response.data.wallet || null);
-          setUserProfile(response.data);
+        const res = await apiService.getCurrentUser();
+        if (res.data) {
+          setWalletAddress(res.data.wallet);
+          setUserProfile(res.data);
           setIsConnected(true);
         }
-      } catch (err: unknown) {
-        console.log(err);
-        setIsConnected(false);
+      } catch {
+        console.log('[Auth] No session');
       } finally {
         setIsLoading(false);
       }
     };
-
-    initializeAuth();
+    init();
   }, []);
 
   const connectWallet = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Starting wallet connection process...');
-// 1. Connect wallet → raw address
-const address = await walletService.connect();
-console.log('Address from walletService.connect():', address);
-if (!address) throw new Error('No address returned');
 
-setWalletAddress(address);
-setIsConnected(true);
+      const response = await walletService.connect();
+      if (!response) throw new Error('No address');
 
-// 2. Get nonce
-console.log('Requesting nonce for address:', address);
-const nonceRes = await apiService.getNonce(address);
-const nonce = nonceRes.data.nonce;
-console.log('Received nonce:', nonce);
-// 3. Sign the message
-const message = `VeriVid Authentication\n\nNonce: ${nonce}`;
-console.log('Signing message:', message);
-const signature = await walletService.signMessage(message);
-console.log('Generated signature:', signature);
-// 4. Login with "address:signature"
-const loginRes = await apiService.login(`${address}:${signature}`);
-console.log('Login response:', loginRes);
-if (loginRes.error) throw new Error(loginRes.error);
+      setWalletAddress(response.address);
+      setIsConnected(true);
+      // const userRes = await apiService.getCurrentUser();
+      setUserProfile(response.user);
 
-      // 5. Load full profile
-      const userRes = await apiService.getCurrentUser();
-      setUserProfile(userRes.data);
-      console.log('User profile loaded:', userRes.data);
-      return address;
+      return response.address;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to connect';
+      const msg = err instanceof Error ? err.message : 'Connection failed';
       setError(msg);
       console.error('[Auth] Connect error:', err);
       return null;
@@ -93,8 +69,6 @@ if (loginRes.error) throw new Error(loginRes.error);
       setWalletAddress(null);
       setIsConnected(false);
       setUserProfile({});
-    } catch (err) {
-      console.error('[Auth] Disconnect error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -103,25 +77,17 @@ if (loginRes.error) throw new Error(loginRes.error);
   const updateProfile = useCallback(async (data: Partial<UserProfile>) => {
     try {
       setIsLoading(true);
-      setError(null);
-
-      const response = await apiService.updateUserProfile(data);
-      if (response.data) {
-        setUserProfile(response.data);
-      }
+      const res = await apiService.updateUserProfile(data);
+      setUserProfile(res.data);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : 'Failed to update profile';
-      setError(errorMsg);
+      setError(err instanceof Error ? err.message : 'Update failed');
       throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  const clearError = useCallback(() => setError(null), []);
 
   return (
     <WalletContext.Provider

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWallet } from '../context/use-wallet';
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -24,71 +25,94 @@ export function WalletConnectModal({
   onClose,
 }: WalletConnectModalProps) {
   const { connectWallet } = useWallet();
+
   const [step, setStep] = useState<
     | 'select'
+    | 'qr'
     | 'signing'
     | 'success'
     | 'recovery'
     | 'recovery-sending'
     | 'recovery-sent'
   >('select');
+
   const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [qrValue, setQrValue] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setStep('select');
       setRecoveryEmail('');
+      setQrValue('');
     }
   }, [isOpen]);
 
-  const handleConnectMetaMask = () => {
-    setStep('signing');
-    (async () => {
-      console.log('1');
-      try {
-        const address = await connectWallet();
-        console.log('2', address);
-        if (address) {
-          setStep('success');
-          setTimeout(() => onClose(), 1500);
-        } else {
-          setStep('select');
-        }
-      } catch (e: unknown) {
-        console.error('[WalletModal] Connect failed:', e);
+  const handleConnectPhantom = async () => {
+    setStep('qr');
+    try {
+      if (window.phantom?.ethereum) {
+        setStep('signing');
+        await connectWallet();
+        setStep('success');
+        setTimeout(() => onClose(), 1500);
+        return;
+      }
+
+      const address = await connectWallet();
+      if (address) {
+        setStep('success');
+        setTimeout(() => onClose(), 1500);
+      } else {
         setStep('select');
       }
-    })();
+    } catch (e: unknown) {
+      console.error('[WalletModal] Phantom connect failed:', e);
+      setStep('select');
+    }
   };
 
-  const handleRecoveryClick = () => {
-    setStep('recovery');
-  };
-
+  const handleRecoveryClick = () => setStep('recovery');
   const handleBackToSelect = () => {
     setStep('select');
     setRecoveryEmail('');
   };
-
   const handleSendRecovery = () => {
     if (!recoveryEmail) return;
-
     setStep('recovery-sending');
-
-    setTimeout(() => {
-      setStep('recovery-sent');
-    }, 1500);
+    setTimeout(() => setStep('recovery-sent'), 1500);
   };
-
-  const handleReturnHome = () => {
-    onClose();
-  };
+  const handleReturnHome = () => onClose();
 
   const handleOpenChange = (open: boolean) => {
-    if (!open && step !== 'signing' && step !== 'recovery-sending') {
+    if (!open && !['signing', 'recovery-sending', 'qr'].includes(step)) {
       onClose();
     }
   };
+
+  const PhantomLogo = () => (
+    <svg
+      width="36"
+      height="36"
+      viewBox="0 0 400 400"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-9 h-9"
+    >
+      <rect width="400" height="400" rx="100" fill="#AB9FF2" />
+      <path
+        d="M300 100H100C77.9086 100 60 117.909 60 140V260C60 282.091 77.9086 300 100 300H300C322.091 300 340 282.091 340 260V140C340 117.909 322.091 100 300 100Z"
+        fill="#635BFF"
+      />
+      <path
+        d="M240 160C240 160 220 180 200 180C180 180 160 160 160 160V240H240V160Z"
+        fill="white"
+      />
+      <path
+        d="M200 220C211.0457 220 220 211.0457 220 200C220 188.9543 211.0457 180 200 180C188.9543 180 180 188.9543 180 200C180 211.0457 188.9543 220 200 220Z"
+        fill="#635BFF"
+      />
+    </svg>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -121,29 +145,29 @@ export function WalletConnectModal({
                   className="text-[#16213E]/70"
                   style={{ fontSize: '0.9375rem' }}
                 >
-                  Connect your MetaMask wallet to get started
+                  Connect your Phantom wallet (Ethereum) to get started
                 </p>
               </DialogHeader>
 
               <div className="space-y-3 mb-6">
                 <button
                   type="button"
-                  onClick={handleConnectMetaMask}
+                  onClick={handleConnectPhantom}
                   className="w-full glass rounded-xl p-5 flex items-center gap-4 hover:bg-white/60 transition-all group text-left"
                 >
-                  <div className="text-3xl">🦊</div>
+                  <PhantomLogo />
                   <div className="flex-1">
                     <div
                       className="text-[#16213E] mb-1 group-hover:text-[#A7E6FF] transition-colors"
                       style={{ fontSize: '1rem', fontWeight: 600 }}
                     >
-                      MetaMask
+                      Phantom
                     </div>
                     <div
                       className="text-[#16213E]/60"
                       style={{ fontSize: '0.875rem' }}
                     >
-                      Desktop browser or mobile app with QR scan
+                      Desktop extension or mobile app (QR scan)
                     </div>
                   </div>
                 </button>
@@ -156,7 +180,7 @@ export function WalletConnectModal({
                   className="w-full text-center text-[#16213E] hover:text-[#C6A0F6] transition-colors"
                   style={{ fontSize: '0.9375rem', fontWeight: 600 }}
                 >
-                  Lost access? Recover your account →
+                  Lost access? Recover your account
                 </button>
               </div>
 
@@ -170,6 +194,39 @@ export function WalletConnectModal({
                   identity on the blockchain.
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {step === 'qr' && (
+            <motion.div
+              key="qr"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="p-8 text-center"
+            >
+              <h3
+                className="text-[#16213E] mb-4"
+                style={{ fontSize: '1.25rem', fontWeight: 700 }}
+              >
+                Scan QR Code
+              </h3>
+
+              {qrValue ? (
+                <QRCode value={qrValue} size={200} className="mx-auto mb-4" />
+              ) : (
+                <p className="mb-4 text-[#16213E]/60">Generating QR code...</p>
+              )}
+
+              <p
+                className="text-[#16213E]/70 mb-4"
+                style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}
+              >
+                Open <strong>Phantom</strong> on your phone → tap the scanner →
+                scan this code.
+                <br />
+                No “page doesn’t exist” errors – Phantom uses its own relay.
+              </p>
             </motion.div>
           )}
 
@@ -234,7 +291,7 @@ export function WalletConnectModal({
                 className="text-[#16213E]/60"
                 style={{ fontSize: '0.9375rem' }}
               >
-                Confirm the connection in your MetaMask wallet...
+                Confirm the connection in your Phantom wallet...
               </p>
             </motion.div>
           )}
@@ -356,13 +413,7 @@ export function WalletConnectModal({
           )}
 
           {step === 'recovery-sending' && (
-            <motion.div
-              key="recovery-sending"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-12 text-center"
-            >
+            <motion.div key="recovery-sending" className="p-12 text-center">
               <div className="relative inline-flex items-center justify-center mb-6">
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -419,13 +470,7 @@ export function WalletConnectModal({
           )}
 
           {step === 'recovery-sent' && (
-            <motion.div
-              key="recovery-sent"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-8 text-center"
-            >
+            <motion.div key="recovery-sent" className="p-8 text-center">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}

@@ -1,125 +1,85 @@
-import { MetaMaskSDK } from '@metamask/sdk';
 import { ethers } from 'ethers';
 import { apiService } from './api.service';
 
+declare global {
+  interface Window {
+    phantom?: {
+      ethereum?: ethers.Eip1193Provider;
+    };
+  }
+}
+
 class WalletService {
-  private sdk: MetaMaskSDK | null = null;
+  private provider: ethers.BrowserProvider | null = null;
+  private signer: ethers.Signer | null = null;
   private address: string | null = null;
 
-  private async initializeSDK(): Promise<void> {
-    if (this.sdk) return;
-
-    console.log('[Wallet] Initializing MetaMask SDK (QR-flow only)');
-
-    this.sdk = new MetaMaskSDK({
-      dappMetadata: {
-        name: 'VeriVid',
-        url: location.origin,
-      },
-      injectProvider: false, // disable extension provider
-      useDeeplink: true, // enable deeplink/QR mode
-      checkInstallationImmediately: false,
-      logging: { developerMode: true },
-      storage: { enabled: true },
-      communicationServerUrl: 'https://metamask-sdk.bridge.walletconnect.org', // default or your own
-    });
-
-    await this.sdk.init();
-    console.log('[Wallet] SDK initialized in QR mode');
-  }
-
-  async connect(): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async connect(): Promise<{ address: string; user: any }> {
     try {
-      console.log('[Wallet] Starting connection (QR scan) …');
-      await this.initializeSDK();
-
-      if (!this.sdk) throw new Error('SDK not initialized');
-
-      console.log('[Wallet] Calling SDK.connect() …');
-      const accounts = await this.sdk.connect();
-      if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts returned from connection');
+      if (!window.phantom?.ethereum) {
+        throw new Error(
+          'Phantom Wallet not detected. Install from phantom.app'
+        );
       }
 
-      const checksummed = ethers.getAddress(accounts[0]);
-      this.address = checksummed;
-      console.log('[Wallet] Connected address:', checksummed);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eth = window.phantom.ethereum as any;
+      if (!eth.isPhantom) throw new Error('Phantom not active');
 
-      // Get nonce
-      const nonceRes = await apiService.getNonce(checksummed);
-      const nonce = nonceRes.data?.nonce;
-      if (!nonce) throw new Error('No nonce received from server');
+      const accounts = await eth.request({ method: 'eth_requestAccounts' });
+      if (!accounts?.length) throw new Error('No accounts');
 
-      // Sign message
-      const message = `VeriVid Authentication: ${nonce}`;
-      console.log('[Wallet] Signing message …');
-      const signature = await this.sdk.connectAndSign({ msg: message });
-      console.log('[Wallet] Signature:', signature);
+      const rawAddress = accounts[0] as string;
+      const address = ethers.getAddress(rawAddress);
+      this.address = address;
 
-      // Verify signature
-      const verifyRes = await apiService.verifySignature(
-        checksummed,
-        signature
-      );
-      if (!verifyRes.data?.user) {
-        throw new Error('Signature verification failed');
-      }
+      this.provider = new ethers.BrowserProvider(eth);
+      this.signer = await this.provider.getSigner();
+      const nonceRes = await apiService.getNonce(address);
+      const nonce = nonceRes.data.nonce;
 
-      // Store auth
-      localStorage.setItem('verivid_wallet', checksummed);
-      localStorage.setItem('verivid_auth', verifyRes.data.token || '');
-      console.log('[Wallet] Fully authenticated');
-
-      return checksummed;
+      const domain = { name: 'VeriVid', version: '1' };
+      const types = {
+        Authentication: [
+          { name: 'message', type: 'string' },
+          { name: 'nonce', type: 'string' },
+        ],
+      };
+      const value = { message: 'VeriVid Authentication', nonce };
+      const signature = await this.signer.signTypedData(domain, types, value);
+      const verifyRes = await apiService.verifySignature(address, signature);
+      if (verifyRes.error) throw new Error(verifyRes.error);
+      const { user, token } = verifyRes.data;
+      localStorage.setItem('verivid_wallet', address);
+      if (token) localStorage.setItem('verivid_auth', token);
+      console.log('[Wallet] Authenticated:', user.id);
+      return { address, user };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error('[Wallet] connect error:', err);
-      if (err.code === 4001) {
-        throw new Error('Connection rejected by user');
-      }
-      if (err.message?.includes('timeout')) {
-        throw new Error('Connection timed out — please try again');
-      }
+      console.error('[Wallet] Error:', err);
+      if (err.code === 4001) throw new Error('User rejected');
       throw err;
     }
   }
 
   async signMessage(nonce: string): Promise<string> {
-    if (!this.sdk) throw new Error('SDK not initialized');
-    try {
-      const message = `VeriVid Authentication: ${nonce}`;
-      console.log('[Wallet] Signing message:', message);
-      const signature = await this.sdk.connectAndSign({ msg: message });
-      console.log('[Wallet] Signature successful:', signature);
-      return signature as string;
-    } catch (err: any) {
-      console.error('[Wallet] signMessage error:', err);
-      if (err.code === 4001) {
-        throw new Error('Signature rejected by user');
-      }
-      throw err;
-    }
+    if (!this.signer) throw new Error('Not connected');
+    const message = `VeriVid Authentication: ${nonce}`;
+    return await this.signer.signMessage(message);
   }
 
   async disconnect(): Promise<void> {
-    try {
-      console.log('[Wallet] Disconnecting …');
-      await apiService.logout();
-      if (this.sdk) {
-        await this.sdk.terminate();
-      }
-    } catch (e) {
-      console.error('[Wallet] disconnect error:', e);
-    } finally {
-      this.sdk = null;
-      this.address = null;
-      localStorage.removeItem('verivid_wallet');
-      localStorage.removeItem('verivid_auth');
-      console.log('[Wallet] Disconnected and cleaned up');
-    }
+    this.provider = null;
+    this.signer = null;
+    this.address = null;
+    localStorage.removeItem('verivid_wallet');
+    localStorage.removeItem('verivid_auth');
+    console.log('[Wallet] Disconnected');
   }
 
   getProvider() {
-    return this.sdk?.getProvider();
+    return this.provider;
   }
 
   getAddress() {
@@ -127,11 +87,7 @@ class WalletService {
   }
 
   isConnected() {
-    return !!this.address && !!this.sdk;
-  }
-
-  isInitialized() {
-    return this.sdk?.isInitialized() || false;
+    return !!this.address && !!this.provider;
   }
 }
 

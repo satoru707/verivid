@@ -83,7 +83,6 @@ router.post('/login', async (req, res) => {
         .json({ error: 'No nonce for this address', data: null });
     }
 
-    // === CHANGE: Use EIP-712 typed data ===
     const domain = { name: 'VeriVid', version: '1' };
     const types = {
       Authentication: [
@@ -102,14 +101,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid signature', data: null });
     }
 
-    // === Regenerate nonce ===
     const newNonce = Math.floor(100000 + Math.random() * 900000).toString();
     await prisma.user.update({
       where: { id: user.id },
       data: { nonce: newNonce },
     });
 
-    // === Issue JWT ===
     const token = createToken({ userId: user.id, wallet: user.wallet });
 
     res.cookie('verivid_token', token, {
@@ -125,6 +122,89 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Server error', data: null });
   }
 });
+
+router.post('/verify', async (req, res) => {
+  const { wallet, signature } = req.body;
+  if (!wallet || !signature) {
+    return res
+      .status(400)
+      .json({ error: 'wallet and signature required', data: null });
+  }
+
+  const lower = wallet.toLowerCase();
+
+  try {
+    let user = await prisma.user.findUnique({ where: { wallet: lower } });
+    if (!user) {
+      console.log('[Auth] Creating new user:', lower);
+      user = await prisma.user.create({
+        data: {
+          wallet: lower,
+          nonce: generateRandomNonce(16),
+        },
+      });
+    }
+
+    const domain = { name: 'VeriVid', version: '1' };
+    const types = {
+      Authentication: [
+        { name: 'message', type: 'string' },
+        { name: 'nonce', type: 'string' },
+      ],
+    };
+    const value = { message: 'VeriVid Authentication', nonce: user.nonce };
+
+    const recovered = ethers.verifyTypedData(domain, types, value, signature);
+    if (recovered.toLowerCase() !== lower) {
+      return res.status(401).json({ error: 'Invalid signature', data: null });
+    }
+
+    const newNonce = generateRandomNonce(16);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { nonce: newNonce },
+    });
+
+    const token = createToken({ userId: user.id, wallet: user.wallet });
+
+    res.cookie('verivid_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({
+      error: null,
+      data: {
+        user: {
+          id: user.id,
+          wallet: user.wallet,
+          username: user.username,
+          email: user.email,
+          bio: user.bio,
+          avatarUrl: user.avatarUrl,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+        token,
+      },
+    });
+  } catch (err) {
+    console.error('[Auth] verify error:', err);
+    return res.status(500).json({ error: 'Server error', data: null });
+  }
+});
+
+router.get('/logout', (req, res) => {
+  res.clearCookie('verivid_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+  return res.json({ error: null, data: { message: 'Logged out' } });
+});
+
 
 router.post('/recover/request', rateLimitMiddleware, async (req, res) => {
   try {

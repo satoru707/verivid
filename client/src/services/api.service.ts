@@ -173,7 +173,7 @@ class APIService {
 
   async logout(): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>('/auth/logout', {
-      method: 'POST',
+      method: 'GET',
     });
   }
 
