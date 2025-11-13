@@ -1,9 +1,10 @@
-import Express, { Router } from 'express';
+import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifyAuth, type AuthRequest } from '../middleware/auth.js';
+import { verifyAuth, AuthRequest } from '../middleware/auth.js';
 import { userUpdateSchema } from '../utils/validation.js';
+import { walletSchema } from '../utils/validation.js';
 
-const router: Express.Router = Router();
+const router = express.Router();
 const prisma = new PrismaClient();
 
 router.get('/me', verifyAuth, async (req: AuthRequest, res) => {
@@ -33,9 +34,7 @@ router.post('/', verifyAuth, async (req: AuthRequest, res) => {
   try {
     const validation = userUpdateSchema.safeParse(req.body);
     if (!validation.success) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', data: validation.error });
+      return res.status(400).json({ error: 'Invalid input', data: null });
     }
 
     const { username, email, bio, avatarUrl } = validation.data;
@@ -43,10 +42,10 @@ router.post('/', verifyAuth, async (req: AuthRequest, res) => {
     const user = await prisma.user.update({
       where: { id: req.user?.userId },
       data: {
-        ...(username && { username }),
-        ...(email && { email }),
-        ...(bio && { bio }),
-        ...(avatarUrl && { avatarUrl }),
+        username,
+        email,
+        bio,
+        avatarUrl,
       },
     });
 
@@ -59,6 +58,13 @@ router.post('/', verifyAuth, async (req: AuthRequest, res) => {
 
 router.get('/:wallet', async (req, res) => {
   try {
+    const validation = walletSchema.safeParse(req.params.wallet);
+    if (!validation.success) {
+      return res
+        .status(400)
+        .json({ error: 'Invalid wallet address', data: null });
+    }
+
     const user = await prisma.user.findUnique({
       where: { wallet: req.params.wallet.toLowerCase() },
       include: {

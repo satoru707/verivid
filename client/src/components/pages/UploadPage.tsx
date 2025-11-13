@@ -94,48 +94,41 @@ export function UploadPage() {
           return;
         }
       } catch (dupError) {
-        setOpenConflictModal(true);
         console.warn('[Upload] Duplicate check failed:', dupError);
       }
 
       const uploadInitResponse = await apiService.initializeUpload(file);
       const uploadInit = uploadInitResponse.data;
+      console.log('Smooth Upload', uploadInit);
 
       const formData = new FormData();
       Object.entries(uploadInit.fields || {}).forEach(([key, value]) => {
         formData.append(key, value);
       });
       formData.append('file', file);
-
-      const uploadResponse = await fetch(uploadInit.uploadUrl, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('File upload failed');
-      }
-
-      await apiService.completeUpload(
-        uploadInit.videoId,
-        uploadInit.uploadUrl,
-        {
-          sha256: hashHex,
-          durationSec: 0,
-        }
-      );
+console.log('Uploading file to S3 with form data:', formData);
+await apiService.completeUpload(uploadInit.videoId, uploadInit.uploadUrl, {
+  sha256: hashHex,
+  durationSec: 0,
+});
+console.log('File uploaded successfully');
 
       const prepareVerificationResponse = await apiService.prepareVerification(
         uploadInit.videoId
+      );
+      console.log(
+        'Prepare Verification Response:',
+        prepareVerificationResponse
       );
       const verifyPrep = prepareVerificationResponse.data;
       if (!(window as any).ethereum) {
         throw new Error('MetaMask not found');
       }
-
-      const provider = new (ethers as any).providers.Web3Provider(
-        (window as any).ethereum
-      );
+console.log('Requesting signature from wallet');
+const provider = new (ethers as any).providers.Web3Provider(
+  (window as any).ethereum
+);
+console.log('Got provider:', provider);
       const walletSigner = provider.getSigner();
 
       const messageToSign = JSON.stringify({

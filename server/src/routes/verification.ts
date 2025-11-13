@@ -1,11 +1,13 @@
-import Express, { Router } from 'express';
+import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifyAuth, type AuthRequest } from '../middleware/auth.js';
+import { verifyAuth, AuthRequest } from '../middleware/auth.js';
+import { VerificationService } from '../services/verification.service.js';
 import { BlockchainService } from '../services/blockchain.service.js';
 import { IPFSService } from '../services/ipfs.service.js';
 
-const router: Express.Router = Router();
+const router = express.Router();
 const prisma = new PrismaClient();
+const verificationService = new VerificationService();
 const blockchainService = new BlockchainService();
 const ipfsService = new IPFSService();
 
@@ -31,9 +33,8 @@ router.post('/prepare-tx', verifyAuth, async (req: AuthRequest, res) => {
         .json({ error: 'Video already verified', data: null });
     }
 
-    const isRegistered = await blockchainService.isProofRegistered(
-      video.sha256
-    );
+    const proofHash = verificationService.generateProofHash(video.sha256);
+    const isRegistered = await blockchainService.isProofRegistered(proofHash);
     if (isRegistered) {
       return res.status(409).json({
         error: 'Proof already registered on-chain',
@@ -50,14 +51,21 @@ router.post('/prepare-tx', verifyAuth, async (req: AuthRequest, res) => {
       ipfsUri: video.ipfsCid ? `ipfs://${video.ipfsCid}` : undefined,
     };
 
+    const metadataHash = await ipfsService.pinJSON(
+      metadata,
+      `metadata-${videoId}`
+    );
+    const metadataUri = ipfsService.getGatewayUrl(metadataHash);
+
     return res.json({
       error: null,
       data: {
         videoId: video.id,
-        proofHash: `0x${video.sha256}`,
+        proofHash,
+        metadataUri,
         metadata,
         contractAddress: process.env.CONTRACT_ADDRESS,
-        chainId: process.env.CONTRACT_CHAIN_ID || '1',
+        chainId: process.env.CONTRACT_CHAIN_ID || '11155111',
       },
     });
   } catch (error) {
@@ -68,13 +76,13 @@ router.post('/prepare-tx', verifyAuth, async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/confirm-tx', async (req, res) => {
+router.post('/confirm-tx', verifyAuth, async (req: AuthRequest, res) => {
   try {
-    const { videoId, txHash, signer, proofHash } = req.body;
+    const { videoId, txHash, signer, proofHash, metadataUri } = req.body;
 
-    if (!videoId || !txHash || !signer) {
+    if (!videoId || !txHash || !signer || !proofHash || !metadataUri) {
       return res.status(400).json({
-        error: 'videoId, txHash, and signer required',
+        error: 'videoId, txHash, signer, proofHash, metadataUri required',
         data: null,
       });
     }
@@ -95,16 +103,12 @@ router.post('/confirm-tx', async (req, res) => {
       });
     }
 
-    const verification = await prisma.verification.create({
-      data: {
-        videoId,
-        txHash,
-        proofHash,
-        signer,
-        chain: 'ethereum:1',
-        metadataUri: proofDetails.metadataUri,
-      },
-    });
+    await verificationService.logVerification(
+      videoId,
+      signer,
+      txHash,
+      metadataUri
+    );
 
     const video = await prisma.video.update({
       where: { id: videoId },
@@ -113,14 +117,12 @@ router.post('/confirm-tx', async (req, res) => {
         verifiedAt: new Date(),
         verifiedBy: signer,
       },
+      include: { verifications: true },
     });
 
     return res.json({
       error: null,
-      data: {
-        verification,
-        video,
-      },
+      data: video,
     });
   } catch (error) {
     console.error('Confirm tx error:', error);

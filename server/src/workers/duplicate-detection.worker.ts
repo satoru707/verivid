@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { emailService } from '../services/email.service.js';
 
 const prisma = new PrismaClient();
 
@@ -19,6 +20,7 @@ export async function scanForDuplicates(
       console.warn(
         `[Worker] Duplicate detected! Video ${videoId} matches ${existingVideo.id}`
       );
+      await flagVideoForModeration(videoId, `Duplicate of ${existingVideo.id}`);
     } else {
       console.log(`[Worker] No duplicates found for video ${videoId}`);
     }
@@ -27,6 +29,7 @@ export async function scanForDuplicates(
       `[Worker] Error scanning duplicates for video ${videoId}:`,
       error
     );
+    throw error;
   }
 }
 
@@ -37,11 +40,27 @@ export async function flagVideoForModeration(
   try {
     console.log(`[Worker] Flagging video ${videoId} for moderation: ${reason}`);
 
-    // In production: send to moderation dashboard or send notification
-    // Could store in a separate "flagged_videos" table
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { flagged: true },
+    });
+
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      include: { uploader: { select: { email: true } } },
+    });
+
+    if (video?.uploader.email) {
+      await emailService.sendNotification(
+        video.uploader.email,
+        'Video Flagged for Moderation',
+        `Your video ${video.originalName} has been flagged: ${reason}. Please review.`
+      );
+    }
 
     console.log(`[Worker] Video ${videoId} flagged for review`);
   } catch (error) {
     console.error(`[Worker] Error flagging video ${videoId}:`, error);
+    throw error;
   }
 }

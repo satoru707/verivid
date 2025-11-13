@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { BlockchainService } from './blockchain.service.js';
+import { ethers } from 'ethers';
 
 export class VerificationService {
   private prisma: PrismaClient;
@@ -10,14 +11,10 @@ export class VerificationService {
     this.blockchainService = new BlockchainService();
   }
 
-  // Generate proof hash from video SHA256
   generateProofHash(sha256: string): string {
-    // In production: use keccak256 for Solidity compatibility
-    // For now: return formatted SHA256
-    return `0x${sha256}`;
+    return ethers.keccak256(ethers.toUtf8Bytes(sha256));
   }
 
-  // Verify video authenticity against blockchain
   async verifyVideoAuthenticity(videoId: string): Promise<boolean> {
     try {
       const video = await this.prisma.video.findUnique({
@@ -31,29 +28,37 @@ export class VerificationService {
         await this.blockchainService.isProofRegistered(proofHash);
 
       return isRegistered;
-    } catch {
+    } catch (error) {
+      console.error('Error verifying video authenticity:', error);
       return false;
     }
   }
 
-  // Create verification audit log
   async logVerification(
     videoId: string,
     wallet: string,
-    txHash: string
+    txHash: string,
+    metadataUri: string
   ): Promise<void> {
+    const video = await this.prisma.video.findUnique({
+      where: { id: videoId },
+    });
+    if (!video) {
+      throw new Error(`Video ${videoId} not found`);
+    }
+    const proofHash = this.generateProofHash(video.sha256);
     await this.prisma.verification.create({
       data: {
         videoId,
         txHash,
         signer: wallet,
-        proofHash: '', // Update with actual hash
+        proofHash,
         chain: 'ethereum:1',
+        metadataUri,
       },
     });
   }
 
-  // Check for duplicate videos by hash
   async checkDuplicate(
     sha256: string
   ): Promise<{ exists: boolean; videoId?: string }> {
@@ -67,7 +72,6 @@ export class VerificationService {
     };
   }
 
-  // Batch verify videos
   async batchVerify(videoIds: string[]): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
 

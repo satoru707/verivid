@@ -1,12 +1,14 @@
-import express, { Router } from 'express';
-import crypto from 'crypto';
+import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { createToken } from '../utils/jwt.js';
 import { generateRandomNonce } from '../utils/crypto.js';
 import { ethers } from 'ethers';
+import { emailService } from '../services/email.service.js';
+import { walletSchema } from '../utils/validation.js';
+import { emailSchema } from '../utils/validation.js';
 
-const router: express.Router = Router();
+const router = express.Router();
 const prisma = new PrismaClient();
 
 const rateLimiter = new RateLimiterMemory({
@@ -32,8 +34,15 @@ const rateLimitMiddleware = async (
 
 router.post('/nonce', async (req, res) => {
   const { wallet } = req.body;
-  if (!wallet || typeof wallet !== 'string') {
+  if (!wallet) {
     return res.status(400).json({ error: 'wallet is required', data: null });
+  }
+
+  const validation = walletSchema.safeParse(wallet);
+  if (!validation.success) {
+    return res
+      .status(400)
+      .json({ error: 'Invalid wallet address', data: null });
   }
 
   const lower = wallet.toLowerCase();
@@ -59,11 +68,9 @@ router.post('/nonce', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { wallet: payload } = req.body;
+  const { payload } = req.body;
   if (!payload || typeof payload !== 'string') {
-    return res
-      .status(400)
-      .json({ error: 'wallet payload required', data: null });
+    return res.status(400).json({ error: 'payload required', data: null });
   }
 
   const [address, signature] = payload.split(':');
@@ -101,7 +108,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid signature', data: null });
     }
 
-    const newNonce = Math.floor(100000 + Math.random() * 900000).toString();
+    const newNonce = generateRandomNonce(16);
     await prisma.user.update({
       where: { id: user.id },
       data: { nonce: newNonce },
@@ -129,6 +136,13 @@ router.post('/verify', async (req, res) => {
     return res
       .status(400)
       .json({ error: 'wallet and signature required', data: null });
+  }
+
+  const validation = walletSchema.safeParse(wallet);
+  if (!validation.success) {
+    return res
+      .status(400)
+      .json({ error: 'Invalid wallet address', data: null });
   }
 
   const lower = wallet.toLowerCase();
@@ -205,13 +219,17 @@ router.get('/logout', (req, res) => {
   return res.json({ error: null, data: { message: 'Logged out' } });
 });
 
-
 router.post('/recover/request', rateLimitMiddleware, async (req, res) => {
   try {
     const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email required', data: null });
+    }
+
+    const validation = emailSchema.safeParse(email);
+    if (!validation.success) {
+      return res.status(400).json({ error: 'Invalid email', data: null });
     }
 
     const user = await prisma.user.findUnique({
@@ -225,7 +243,7 @@ router.post('/recover/request', rateLimitMiddleware, async (req, res) => {
       });
     }
 
-    const recoveryToken = crypto.randomBytes(32).toString('hex');
+    const recoveryToken = generateRandomNonce(32);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.user.update({
@@ -237,7 +255,7 @@ router.post('/recover/request', rateLimitMiddleware, async (req, res) => {
     });
 
     const recoveryLink = `${process.env.FRONTEND_URL}/recover?token=${recoveryToken}`;
-    console.log(`Recovery email would send to ${email}: ${recoveryLink}`);
+    await emailService.sendRecoveryEmail(email, recoveryLink);
 
     return res.json({
       error: null,
@@ -259,6 +277,13 @@ router.post('/recover/verify', async (req, res) => {
       return res
         .status(400)
         .json({ error: 'Token and new wallet required', data: null });
+    }
+
+    const validation = walletSchema.safeParse(newWallet);
+    if (!validation.success) {
+      return res
+        .status(400)
+        .json({ error: 'Invalid new wallet address', data: null });
     }
 
     const user = await prisma.user.findFirst({

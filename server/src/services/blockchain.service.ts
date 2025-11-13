@@ -36,10 +36,17 @@ export class BlockchainService {
   private contractAddress: string;
 
   constructor() {
-    const rpcUrl =
-      process.env.RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/demo';
+    const rpcUrl = process.env.RPC_URL;
+    if (!rpcUrl) {
+      throw new Error('RPC_URL is not defined in environment variables');
+    }
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    this.contractAddress = process.env.CONTRACT_ADDRESS || '';
+    this.contractAddress = process.env.CONTRACT_ADDRESS!;
+    if (!this.contractAddress) {
+      throw new Error(
+        'CONTRACT_ADDRESS is not defined in environment variables'
+      );
+    }
   }
 
   async isProofRegistered(proofHash: string): Promise<boolean> {
@@ -54,7 +61,7 @@ export class BlockchainService {
       return registered;
     } catch (error) {
       console.error('Error checking proof registration:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -78,7 +85,7 @@ export class BlockchainService {
       };
     } catch (error) {
       console.error('Error fetching proof details:', error);
-      return null;
+      throw error;
     }
   }
 
@@ -88,7 +95,7 @@ export class BlockchainService {
       return receipt?.status === 1;
     } catch (error) {
       console.error('Error verifying transaction:', error);
-      return false;
+      throw error;
     }
   }
 }
