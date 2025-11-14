@@ -1,10 +1,11 @@
-// routes/videos.ts
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { verifyAuth, AuthRequest } from '../middleware/auth.js';
 import { UploadService } from '../services/upload.service.js';
 import { VerificationService } from '../services/verification.service.js';
 import { uploadInitSchema, sha256Schema } from '../utils/validation.js';
+import { sha256Hash } from '../utils/crypto.js';
+import { folder } from '../workers/video-processing.worker.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -71,7 +72,7 @@ router.post('/upload-init', verifyAuth, async (req: AuthRequest, res) => {
       },
     });
 
-    const { url, fields } = await uploadService.generatePresignedPost(
+    const uploadUrl = await uploadService.generatePresignedUrl(
       video.id,
       filename
     );
@@ -80,8 +81,7 @@ router.post('/upload-init', verifyAuth, async (req: AuthRequest, res) => {
       error: null,
       data: {
         videoId: video.id,
-        uploadUrl: url,
-        uploadFields: fields,
+        uploadUrl,
       },
     });
   } catch (error) {
@@ -120,8 +120,8 @@ router.post(
         return res.status(400).json({ error: 'Hash mismatch', data: null });
       }
 
-      const key = `videos/${req.params.id}/${video.originalName}`;
-      const storageUrl = `s3://${process.env.S3_BUCKET}/${key}`;
+      const dbxPath = `${folder}/videos/${req.params.id}/${video.originalName}`;
+      const storageUrl = await uploadService.getSharedLink(dbxPath);
 
       const updatedVideo = await prisma.video.update({
         where: { id: req.params.id },
@@ -136,6 +136,47 @@ router.post(
       return res
         .status(500)
         .json({ error: 'Failed to complete upload', data: null });
+    }
+  }
+);
+
+router.post(
+  '/:id/upload',
+  verifyAuth,
+  async (req: AuthRequest & { files?: any }, res) => {
+    try {
+      const file = req.files?.file;
+      if (!file) {
+        return res.status(400).json({ error: 'File required', data: null });
+      }
+
+      const video = await prisma.video.findUnique({
+        where: { id: req.params.id },
+      });
+      if (!video || video.uploaderId !== req.user?.userId) {
+        return res.status(403).json({ error: 'Unauthorized', data: null });
+      }
+
+      const fileBuffer = file.data;
+      const sha256 = sha256Hash(fileBuffer);
+
+      const storageUrl = await uploadService.uploadToDropbox(
+        req.params.id,
+        fileBuffer,
+        file.name
+      );
+
+      const updated = await prisma.video.update({
+        where: { id: req.params.id },
+        data: { storageUrl, sha256 },
+      });
+
+      await uploadService.processVideo(req.params.id);
+
+      return res.json({ error: null, data: updated });
+    } catch (error) {
+      console.error('Upload error:', error);
+      return res.status(500).json({ error: 'Upload failed', data: null });
     }
   }
 );

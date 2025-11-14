@@ -1,4 +1,4 @@
-import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 
 export interface EmailService {
   sendRecoveryEmail(email: string, recoveryLink: string): Promise<void>;
@@ -10,40 +10,53 @@ export interface EmailService {
   ): Promise<void>;
 }
 
-export class SendGridEmailService implements EmailService {
+export class SmtpEmailService implements EmailService {
+  private transporter;
+
   constructor() {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        'SENDGRID_API_KEY is not defined in environment variables'
-      );
+    const host = process.env.SMTP_HOST;
+    const port = parseInt(process.env.SMTP_PORT || '587', 10);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    if (!host || !user || !pass) {
+      throw new Error('SMTP credentials (HOST, USER, PASS) missing in .env');
     }
-    sgMail.setApiKey(apiKey);
+
+    this.transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: false,
+      auth: { user, pass },
+      tls: { rejectUnauthorized: false },
+    });
   }
 
   async sendRecoveryEmail(email: string, recoveryLink: string): Promise<void> {
-    const msg = {
+    const from = process.env.SMTP_FROM_EMAIL || 'no-reply@verivid.app';
+
+    await this.transporter.sendMail({
+      from: `"VeriVid" <${from}>`,
       to: email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'no-reply@verivid.app',
       subject: 'VeriVid Account Recovery',
       text: `Click here to recover your account: ${recoveryLink}`,
       html: `<p>Click <a href="${recoveryLink}">here</a> to recover your account.</p>`,
-    };
-    await sgMail.send(msg);
+    });
   }
 
   async sendVerificationEmail(
     email: string,
     verificationLink: string
   ): Promise<void> {
-    const msg = {
+    const from = process.env.SMTP_FROM_EMAIL || 'no-reply@verivid.app';
+
+    await this.transporter.sendMail({
+      from: `"VeriVid" <${from}>`,
       to: email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'no-reply@verivid.app',
-      subject: 'VeriVid Email Verification',
+      subject: 'Verify Your VeriVid Email',
       text: `Click here to verify your email: ${verificationLink}`,
       html: `<p>Click <a href="${verificationLink}">here</a> to verify your email.</p>`,
-    };
-    await sgMail.send(msg);
+    });
   }
 
   async sendNotification(
@@ -51,15 +64,16 @@ export class SendGridEmailService implements EmailService {
     subject: string,
     message: string
   ): Promise<void> {
-    const msg = {
+    const from = process.env.SMTP_FROM_EMAIL || 'no-reply@verivid.app';
+
+    await this.transporter.sendMail({
+      from: `"VeriVid" <${from}>`,
       to: email,
-      from: process.env.SENDGRID_FROM_EMAIL || 'no-reply@verivid.app',
       subject,
       text: message,
       html: `<p>${message}</p>`,
-    };
-    await sgMail.send(msg);
+    });
   }
 }
 
-export const emailService = new SendGridEmailService();
+export const emailService = new SmtpEmailService();

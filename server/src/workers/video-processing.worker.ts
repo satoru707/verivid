@@ -1,51 +1,54 @@
 import { PrismaClient } from '@prisma/client';
-import {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-} from '@aws-sdk/client-s3';
+import { Dropbox } from 'dropbox';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { Readable } from 'stream';
 
 const execAsync = promisify(exec);
 const prisma = new PrismaClient();
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
-const bucket = process.env.S3_BUCKET || '';
+const accessToken = process.env.DROPBOX_ACCESS_TOKEN;
+if (!accessToken) {
+  throw new Error('DROPBOX_ACCESS_TOKEN not defined');
+}
+const dbx = new Dropbox({ accessToken });
+export const folder = process.env.DROPBOX_FOLDER || '/VeriVidVideos';
 
-async function downloadFromS3(key: string, tempPath: string): Promise<void> {
-  const command = new GetObjectCommand({ Bucket: bucket, Key: key });
-  const { Body } = await s3.send(command);
-  if (!Body) throw new Error('No body in S3 object');
-  const stream = Body as Readable;
-  const writeStream = fs.createWriteStream(tempPath);
-  await new Promise((resolve, reject) => {
-    stream
-      .pipe(writeStream)
-      .on('finish', () => resolve)
-      .on('error', reject);
-  });
+async function downloadFromDropbox(
+  dbxPath: string,
+  tempPath: string
+): Promise<void> {
+  try {
+    const response = (await dbx.filesDownload({ path: dbxPath })) as any;
+    fs.writeFileSync(tempPath, response.result.fileBlob as Buffer);
+  } catch (error) {
+    console.error('Error downloading from Dropbox:', error);
+    throw error;
+  }
 }
 
-async function uploadToS3(key: string, filePath: string): Promise<string> {
-  const body = fs.createReadStream(filePath);
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: body,
-  });
-  await s3.send(command);
-  return `s3://${bucket}/${key}`;
+async function uploadToDropbox(
+  dbxPath: string,
+  filePath: string
+): Promise<string> {
+  try {
+    const contents = fs.readFileSync(filePath);
+    const response = await dbx.filesUpload({
+      path: dbxPath,
+      contents,
+      mode: { '.tag': 'add' },
+      autorename: true,
+    });
+    const sharedLink = await dbx.sharingCreateSharedLinkWithSettings({
+      path: response.result.path_lower as string,
+    });
+    return sharedLink.result.url.replace('?dl=0', '?raw=1');
+  } catch (error) {
+    console.error('Error uploading to Dropbox:', error);
+    throw error;
+  }
 }
 
 export async function processVideoMetadata(
@@ -54,12 +57,12 @@ export async function processVideoMetadata(
 ): Promise<void> {
   const tempDir = os.tmpdir();
   const tempVideoPath = path.join(tempDir, `video-${videoId}.mp4`);
-  const key = storageUrl.replace(`s3://${bucket}/`, '');
+  const dbxPath = storageUrl;
 
   try {
     console.log(`[Worker] Processing metadata for video ${videoId}`);
 
-    await downloadFromS3(key, tempVideoPath);
+    await downloadFromDropbox(dbxPath, tempVideoPath);
 
     const { stdout } = await execAsync(
       `ffprobe -v error -show_format -show_streams -print_format json ${tempVideoPath}`
@@ -99,19 +102,22 @@ export async function generateThumbnail(
   const tempDir = os.tmpdir();
   const tempVideoPath = path.join(tempDir, `video-${videoId}.mp4`);
   const tempThumbnailPath = path.join(tempDir, `thumbnail-${videoId}.jpg`);
-  const key = storageUrl.replace(`s3://${bucket}/`, '');
-  const thumbnailKey = `thumbnails/${videoId}.jpg`;
+  const dbxPath = storageUrl;
+  const thumbnailDbxPath = `${folder}/thumbnails/${videoId}.jpg`;
 
   try {
     console.log(`[Worker] Generating thumbnail for video ${videoId}`);
 
-    await downloadFromS3(key, tempVideoPath);
+    await downloadFromDropbox(dbxPath, tempVideoPath);
 
     await execAsync(
       `ffmpeg -i ${tempVideoPath} -ss 00:00:01.000 -vframes 1 ${tempThumbnailPath}`
     );
 
-    const thumbnailUrl = await uploadToS3(thumbnailKey, tempThumbnailPath);
+    const thumbnailUrl = await uploadToDropbox(
+      thumbnailDbxPath,
+      tempThumbnailPath
+    );
 
     await prisma.video.update({
       where: { id: videoId },
@@ -135,19 +141,22 @@ export async function transcodeVideo(
   const tempDir = os.tmpdir();
   const tempVideoPath = path.join(tempDir, `video-${videoId}.mp4`);
   const tempTranscodedPath = path.join(tempDir, `transcoded-${videoId}.mp4`);
-  const key = storageUrl.replace(`s3://${bucket}/`, '');
-  const transcodedKey = `transcoded/${videoId}.mp4`;
+  const dbxPath = storageUrl;
+  const transcodedDbxPath = `${folder}/transcoded/${videoId}.mp4`;
 
   try {
     console.log(`[Worker] Starting transcoding for video ${videoId}`);
 
-    await downloadFromS3(key, tempVideoPath);
+    await downloadFromDropbox(dbxPath, tempVideoPath);
 
     await execAsync(
       `ffmpeg -i ${tempVideoPath} -vf scale=1280:720 -c:v libx264 -preset slow -crf 23 ${tempTranscodedPath}`
     );
 
-    const transcodedUrl = await uploadToS3(transcodedKey, tempTranscodedPath);
+    const transcodedUrl = await uploadToDropbox(
+      transcodedDbxPath,
+      tempTranscodedPath
+    );
 
     await prisma.video.update({
       where: { id: videoId },

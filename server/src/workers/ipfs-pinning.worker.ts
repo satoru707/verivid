@@ -1,35 +1,31 @@
 import { PrismaClient } from '@prisma/client';
 import { IPFSService } from '../services/ipfs.service.js';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Dropbox } from 'dropbox';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { Readable } from 'stream';
 
 const prisma = new PrismaClient();
 const ipfsService = new IPFSService();
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
-const bucket = process.env.S3_BUCKET || '';
+const accessToken = process.env.DROPBOX_ACCESS_TOKEN;
+if (!accessToken) {
+  throw new Error('DROPBOX_ACCESS_TOKEN not defined');
+}
+const dbx = new Dropbox({ accessToken });
+const folder = process.env.DROPBOX_FOLDER || '/VeriVidVideos';
 
-async function downloadFromS3(key: string, tempPath: string): Promise<void> {
-  const command = new GetObjectCommand({ Bucket: bucket, Key: key });
-  const { Body } = await s3.send(command);
-  if (!Body) throw new Error('No body in S3 object');
-  const stream = Body as Readable;
-  const writeStream = fs.createWriteStream(tempPath);
-  await new Promise((resolve, reject) => {
-    stream
-      .pipe(writeStream)
-      .on('finish', () => resolve)
-      .on('error', reject);
-  });
+async function downloadFromDropbox(
+  dbxPath: string,
+  tempPath: string
+): Promise<void> {
+  try {
+    const response = (await dbx.filesDownload({ path: dbxPath })) as any;
+    fs.writeFileSync(tempPath, response.result.fileBlob as Buffer);
+  } catch (error) {
+    console.error('Error downloading from Dropbox:', error);
+    throw error;
+  }
 }
 
 export async function pinVideoToIPFS(
@@ -37,13 +33,16 @@ export async function pinVideoToIPFS(
   storageUrl: string
 ): Promise<void> {
   const tempDir = os.tmpdir();
-  const tempPath = path.join(tempDir, `video-${videoId}`);
-  const key = storageUrl.replace(`s3://${bucket}/`, '');
+  const tempPath = path.join(tempDir, `video-${videoId}.mp4`);
+  const dbxPath = storageUrl;
 
   try {
     console.log(`[Worker] Starting IPFS pin for video ${videoId}`);
-    await downloadFromS3(key, tempPath);
+
+    await downloadFromDropbox(dbxPath, tempPath);
+
     const ipfsHash = await ipfsService.pinFile(tempPath, `video-${videoId}`);
+
     await prisma.video.update({
       where: { id: videoId },
       data: { ipfsCid: ipfsHash },
@@ -73,6 +72,7 @@ export async function pinMetadataToIPFS(
     );
 
     const metadataUri = ipfsService.getGatewayUrl(metadataHash);
+
     const verification = await prisma.verification.findFirst({
       where: { videoId },
       orderBy: { createdAt: 'desc' },
